@@ -1,0 +1,6 @@
+#ifndef __VERSION_H
+#define __VERSION_H
+/* LK_VER_TAG = <PROJECT>-<LAST_COMMIT_HASH>-<LAST_COMMIT_DATE>-<BUILD_DATE> */
+#define LK_VER_TAG "k63v2_64_bsp---20200618090011"
+#define PROJECT "k63v2_64_bsp"
+#endif
