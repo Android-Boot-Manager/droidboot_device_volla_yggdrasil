@@ -128,19 +128,7 @@ int yellow_state_warning(void)
 
 int orange_state_warning(void)
 {
-	const char *title_msg = "Orange State\n\n";
-	int ret = 0;
-
-	video_clean_screen();
-	video_set_cursor(video_get_rows() - 8, 0);
-	video_printf(title_msg);
-	video_printf("Your device has been unlocked and can't be trusted\n");
-	video_printf("Your device will boot in 3 seconds\n");
-	mtk_wdt_restart();
-	mdelay(3000);
-	mtk_wdt_restart();
-
-	return ret;
+	return 0;
 }
 
 int red_state_warning(const char *img_name)

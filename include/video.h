@@ -22,9 +22,9 @@ void video_clean_screen(void);
 void video_set_cursor(int row, int col);
 int  video_get_rows(void);
 int  video_get_colums(void);
-
+void video_putpixel(int x, int y, uint32_t color);
 void video_set_fg_color(unsigned char r, unsigned char g, unsigned char b);
 void video_set_bg_color(unsigned char r, unsigned char g, unsigned char b);
 void video_set_default_color(void);
-
+void video_put_pixel(unsigned int x, unsigned int y, unsigned int color);
 #endif

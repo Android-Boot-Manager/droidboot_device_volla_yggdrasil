@@ -901,7 +901,18 @@ static int video_lk_init(void)
 
 	return 0;
 }
+void video_putpixel(int x, int y, uint32_t color)
+{
 
+    cfb_fb_addrs = (void *)VDO_CFB_ADDRS;
+
+	long location = x * (PIXEL_SIZE/8) + y * CFG_DISPLAY_WIDTH * (PIXEL_SIZE/8);
+   // memset((void *)VDO_CFB_ADDRS+location, 0xff, VDO_CFB_ADDRS+location+1);
+	/*BGR*/
+	//*((uint8_t *)cfb_fb_addrs + x*y + 0) = ((color >> 0) & 0xff);
+	//*((uint8_t *)cfb_fb_addrs + x*y + 1) = ((color >> 8)  & 0xff);
+	//*((uint8_t *)cfb_fb_addrs + x*y + 2) = ((color >> 16)  & 0xff);
+}
 void video_set_cursor(int row, int col)
 {
 	if (row >= 0 && row < (int)(CFB_ROW) && col >= 0 && col <= (int)(CFB_COL)) {
@@ -1168,7 +1179,10 @@ void fbcon_disp_string(int font_scale,const char *s)
 	video_drawstr_scale_by_pixel(x, y, font_scale, s);
 	return;
 }
-
+void video_put_pixel(unsigned int x, unsigned int y, unsigned int color)
+{
+video_draw_pixel(x, y, color);
+}
 void fbcon_clear_image(const unsigned int data,
 		unsigned int xpos, unsigned int ypos, unsigned int width, unsigned int height)
 {

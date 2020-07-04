@@ -38,9 +38,9 @@ typedef struct {
 	char modeIdent[80];
 } GraphicDevice;
 
-
+void video_draw_pixel(unsigned int x, unsigned int y, unsigned int color);
 void *video_hw_init (void);       /* returns GraphicDevice struct or NULL */
-
+static int _mtkfb_internal_test(unsigned int va, unsigned int w, unsigned int h);
 void video_set_lut (
     unsigned int index,           /* color number */
     unsigned char r,              /* red */

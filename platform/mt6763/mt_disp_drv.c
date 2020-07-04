@@ -152,7 +152,7 @@ int mt_disp_get_dfo_setting(const char *string, unsigned int *value)
 }
 #endif
 
-static void _mtkfb_draw_block(unsigned int addr, unsigned int x, unsigned int y, unsigned int w, unsigned int h, unsigned int color)
+static void mtkfb_draw_block(unsigned int addr, unsigned int x, unsigned int y, unsigned int w, unsigned int h, unsigned int color)
 {
 	unsigned int i = 0;
 	unsigned int j = 0;
@@ -168,8 +168,14 @@ static void _mtkfb_draw_block(unsigned int addr, unsigned int x, unsigned int y,
 		start_addr += pitch;
 	}
 }
+void video_draw_pixel(unsigned int x, unsigned int y, unsigned int color)
+{
 
-static int _mtkfb_internal_test(unsigned int va, unsigned int w, unsigned int h)
+mtkfb_draw_block(fb_addr, x, y, 1, 1, color);
+
+
+}
+static int mtkfb_internal_test(unsigned int va, unsigned int w, unsigned int h)
 {
 	/* this is for debug, used in bring up day */
 	unsigned int i = 0;
@@ -179,7 +185,7 @@ static int _mtkfb_internal_test(unsigned int va, unsigned int w, unsigned int h)
 	for (i = 0; i < w * h / _internal_test_block_size / _internal_test_block_size; i++) {
 		color = (i & 0x1) * 0xff;
 		color += 0xff000000U;
-		_mtkfb_draw_block(va,
+		mtkfb_draw_block(va,
 				  i % (w / _internal_test_block_size) * _internal_test_block_size,
 				  i / (w / _internal_test_block_size) * _internal_test_block_size,
 				  _internal_test_block_size, _internal_test_block_size, color);
@@ -190,7 +196,7 @@ static int _mtkfb_internal_test(unsigned int va, unsigned int w, unsigned int h)
 	return 0;
 }
 
-static int _mtkfb_internal_test2()
+static int mtkfb_internal_test2()
 {
 	/* this is for debug, used in bring up day */
 	unsigned int i = 0;
@@ -372,8 +378,8 @@ void mt_disp_init(void *lcdbase)
 	input.aen       = 1;
 	input.alpha     = 0xff;
 	primary_display_config_input(&input);
-
-#if 0
+  //  mtkfb_internal_test(logo_db_addr,);
+//#if 0
 	/* debug for bringup */
 	dprintf(CRITICAL, "display show background\n");
 	primary_display_trigger(TRUE);
@@ -389,11 +395,23 @@ void mt_disp_init(void *lcdbase)
 		primary_display_diagnose();
 	}
 */
+ /*   unsigned int color = 0;
+ 
+    for(int i=0; i<100; i++){
+        color = (i & 0x1) * 0xff;
+		color += 0xf231f2ff;
+        for(int ii=0; ii < 100; ii++)
+        {
+         mtkfb_draw_pixel(ii, i, 0xff00ff7b);
+        }
+
+    }
+    primary_display_trigger(1);
 	dprintf(CRITICAL, "display internal test\n");
-	_mtkfb_internal_test(fb_addr, CFG_DISPLAY_WIDTH, CFG_DISPLAY_HEIGHT);
+	//mtkfb_internal_test(fb_addr, CFG_DISPLAY_WIDTH, CFG_DISPLAY_HEIGHT);
 	mdelay(100);
-	primary_display_diagnose();
-#endif
+	//primary_display_diagnose();
+*/
 
 #ifdef DFO_DISP
 	unsigned int lcm_fake_width = 0;

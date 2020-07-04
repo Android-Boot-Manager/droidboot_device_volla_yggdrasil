@@ -1,5 +1,6 @@
 LOCAL_DIR := $(GET_LOCAL_DIR)
-
+INCLUDES += -I$(LK_TOP_DIR)/lib/lvgl
+MODULES +=  lib/lvgl
 MT_BOOT_OBJ_DIR := $(BOOTLOADER_OUT)/build-$(PROJECT)/app/mt_boot
 
 ifeq ($(CUSTOM_SEC_CRYPTO_SUPPORT), yes)
@@ -23,7 +24,8 @@ OBJS += \
 	$(LOCAL_DIR)/aee/mrdump_dummy.o \
 	$(LOCAL_DIR)/blockheader.o \
 	$(LOCAL_DIR)/bootargs.o \
-	$(LOCAL_DIR)/fdt_op.o
+	$(LOCAL_DIR)/fdt_op.o \
+    $(LOCAL_DIR)/dualboot.o
 
 ifeq ($(FASTBOOT_PARALLEL_DOWNLOAD),yes)
 OBJS += \

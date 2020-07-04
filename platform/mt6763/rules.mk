@@ -209,6 +209,7 @@ $(info libshowlogo new path ------- $(LOCAL_DIR)/../../lib/libshowlogo)
 INCLUDES += -I$(LOCAL_DIR)/include \
             -I$(LOCAL_DIR)/include/platform \
             -I$(LOCAL_DIR)/../../lib/libshowlogo \
+            -I$(LK_TOP_DIR)/lib/lvgl \
             -I$(LK_TOP_DIR)/app/mt_boot/ \
             -Icustom/$(FULL_PROJECT)/lk/include/target \
             -Icustom/$(FULL_PROJECT)/lk/lcm/inc \

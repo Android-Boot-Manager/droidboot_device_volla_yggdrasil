@@ -111,7 +111,7 @@
 #include <dev/uart.h>
 #include <sec_hrid.h>
 #include <sec_devinfo.h>
-
+#include <dualboot.h>
 extern u32 current_lk_buf_addr_get(void) __attribute__((weak));
 extern u32 current_buf_addr_get(void) __attribute__((weak));
 extern u32 current_buf_pl_lk_log_size_get(void) __attribute__((weak));
@@ -1882,7 +1882,8 @@ void mt_boot_init(const struct app_descriptor *app)
 #endif
 
 	/* Will not return */
-	boot_linux_from_storage();
+//	boot_linux_from_storage();
+    db_init();
 
 fastboot:
 	target_fastboot_init();
