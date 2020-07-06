@@ -44,13 +44,10 @@ void my_disp_flush(lv_disp_t * disp,
 static void event_handler(lv_obj_t * obj, lv_event_t event)
 {
     if(event == LV_EVENT_CLICKED) {
-        video_printf("Clicked: %s\n", lv_list_get_btn_text(obj));
-        lv_obj_t * list1 =lv_obj_get_parent(obj);
-        //video_printf("Clicked: %s\n", lv_list_get_btn_index(list1, obj));
-      //  if(lv_list_get_btn_index(list1, obj)==0)
-        //{
-            video_printf("booting linux");
+        int index = lv_list_get_btn_index(NULL, obj);
+        if(index==0){
             boot_linux_from_storage();
+        }
         //}
     }
 }
@@ -117,6 +114,5 @@ void db_init()
 
     list_btn = lv_list_add_btn(list1,  LV_SYMBOL_FILE, "Extras");
     lv_obj_set_event_cb(list_btn, event_handler);
-
     
 }
