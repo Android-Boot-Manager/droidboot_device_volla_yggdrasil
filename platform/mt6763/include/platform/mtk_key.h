@@ -18,7 +18,7 @@
 #define KPD_MEM5_BITS   8
 
 #define KPD_NUM_KEYS    72  /* 4 * 16 + KPD_MEM5_BITS */
-
+typedef unsigned int        u32;
 struct keypad_dts_data {
 	u32 kpd_sw_pwrkey;
 	u32 kpd_hw_pwrkey;
@@ -34,7 +34,7 @@ struct keypad_dts_data {
 void set_kpd_pmic_mode(void);
 void disable_PMIC_kpd_clock(void);
 void enable_PMIC_kpd_clock(void);
-BOOL mtk_detect_key(unsigned short key);
-BOOL mtk_detect_pmic_just_rst(void);
+bool mtk_detect_key(unsigned short key);
+bool mtk_detect_pmic_just_rst(void);
 
 #endif /* __MTK_KEY_H__ */

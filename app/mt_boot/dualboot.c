@@ -1,11 +1,27 @@
 #include "lvgl/lvgl.h"
 #include <kernel/thread.h>
+#include <platform/mtk_key.h>
+#include <target/cust_key.h>
+#include <sys/types.h>
+#include <reg.h>
+#include <debug.h>
+#include <err.h>
+#include <reg.h>
+#include <video.h>
+#include <platform/mt_typedefs.h>
+#include <platform/boot_mode.h>
+#include <platform/mt_reg_base.h>
+#include <platform/mt_gpt.h>
+#include <platform/mtk_wdt.h>
+
+typedef unsigned int        u32;
+
 static int sleep_thread(void * arg) {
   /*Handle LitlevGL tasks (tickless mode)*/
   while (1) {
-    lv_tick_inc(5);
+    lv_tick_inc(10);
     lv_task_handler();
-    thread_sleep(5);
+    thread_sleep(10);
   }
 
   return 0;
@@ -16,7 +32,7 @@ void my_disp_flush(lv_disp_t * disp,
   uint x, y;
   for (y = area -> y1; y <= area -> y2; y++) {
     for (x = area -> x1; x <= area -> x2; x++) {
-      video_put_pixel(x, y, 0xff << 24 | color_p->ch.red << 16 | color_p->ch.green << 8 | color_p->ch.blue ); /* Put a pixel to the display.*/
+      video_draw_pixel(x, y, 0xff << 24 | color_p->ch.red << 16 | color_p->ch.green << 8 | color_p->ch.blue ); /* Put a pixel to the display.*/
       
       color_p++;
     }
@@ -25,7 +41,40 @@ void my_disp_flush(lv_disp_t * disp,
   lv_disp_flush_ready(disp); /* Indicate you are ready with the flushing*/
 }
 
+static void event_handler(lv_obj_t * obj, lv_event_t event)
+{
+    if(event == LV_EVENT_CLICKED) {
+        video_printf("Clicked: %s\n", lv_list_get_btn_text(obj));
+        lv_obj_t * list1 =lv_obj_get_parent(obj);
+        //video_printf("Clicked: %s\n", lv_list_get_btn_index(list1, obj));
+      //  if(lv_list_get_btn_index(list1, obj)==0)
+        //{
+            video_printf("booting linux");
+            boot_linux_from_storage();
+        //}
+    }
+}
 
+bool key_read(lv_indev_drv_t * drv, lv_indev_data_t*data)
+{
+    data->key = LV_KEY_UP;
+    if (mtk_detect_key(MT65XX_MENU_SELECT_KEY)){
+        data->state = LV_INDEV_STATE_PR;
+        return false; /*No buffering now so no more data read*/
+    } 
+    data->key = LV_KEY_DOWN;
+    if (mtk_detect_key(MT65XX_MENU_OK_KEY)){
+        data->state = LV_INDEV_STATE_PR;
+         return false; /*No buffering now so no more data read*/
+    } 
+    data->key = LV_KEY_ENTER;
+    if (mtk_detect_key(MTK_PMIC_PWR_KEY)){
+        video_printf("power");
+        data->state = LV_INDEV_STATE_PR;
+         return false; /*No buffering now so no more data read*/
+    } 
+   
+}
 void db_init()
 {
     thread_t *thr;
@@ -44,4 +93,30 @@ void db_init()
 
     lv_obj_t * win = lv_win_create(lv_scr_act(), NULL);
     lv_win_set_title(win, "Boot menu"); 
+
+    lv_obj_t * list1 = lv_list_create(win, NULL);
+    lv_group_t * g1 = lv_group_create();
+    lv_group_add_obj(g1, list1);
+    lv_group_focus_obj(list1);
+    lv_obj_set_size(list1, 1000, 2100);
+    lv_obj_align(list1, NULL, LV_ALIGN_IN_TOP_MID, 0, 0);
+    lv_list_set_anim_time(list1, 0);
+
+    lv_indev_drv_t indev_drv;
+    lv_indev_drv_init(&indev_drv);      /*Basic initialization*/
+    indev_drv.type = LV_INDEV_TYPE_KEYPAD;
+    indev_drv.read_cb = key_read;
+    /*Register the driver in LVGL and save the created input device object*/
+    lv_indev_t * my_indev = lv_indev_drv_register(&indev_drv);
+    lv_indev_set_group(my_indev, g1);
+    
+    lv_obj_t * list_btn;
+
+    list_btn = lv_list_add_btn(list1, LV_SYMBOL_FILE, "main");
+    lv_obj_set_event_cb(list_btn, event_handler);
+
+    list_btn = lv_list_add_btn(list1,  LV_SYMBOL_FILE, "Extras");
+    lv_obj_set_event_cb(list_btn, event_handler);
+
+    
 }

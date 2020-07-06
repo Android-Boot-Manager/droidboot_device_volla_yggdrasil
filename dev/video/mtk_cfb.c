@@ -1179,10 +1179,6 @@ void fbcon_disp_string(int font_scale,const char *s)
 	video_drawstr_scale_by_pixel(x, y, font_scale, s);
 	return;
 }
-void video_put_pixel(unsigned int x, unsigned int y, unsigned int color)
-{
-video_draw_pixel(x, y, color);
-}
 void fbcon_clear_image(const unsigned int data,
 		unsigned int xpos, unsigned int ypos, unsigned int width, unsigned int height)
 {

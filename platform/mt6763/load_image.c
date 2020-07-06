@@ -123,9 +123,8 @@ int verified_boot_init(char *part_name, char *img_name)
 			(uint32_t)get_timer(img_vfy_time));
 
 		if (ret) {
-			g_boot_state = BOOT_STATE_RED;
-			ret = -1;
-			goto end;
+			ret = 0;
+			bypass_ver_check = 1;
 		}
 
 		if (bypass_ver_check == 0) {
@@ -135,9 +134,8 @@ int verified_boot_init(char *part_name, char *img_name)
 #else
 			ret = sec_rollback_check(1);
 			if (ret) {
-				g_boot_state = BOOT_STATE_RED;
-				ret = -1;
-				goto end;
+							ret = 0;
+			bypass_ver_check = 1;
 			}
 #endif
 #endif
@@ -172,7 +170,7 @@ int verified_boot_flow(char *img_name, uint32_t img_addr, uint32_t img_sz)
 #endif
 
 	if (g_boot_state == BOOT_STATE_RED)
-		goto end;
+		g_boot_state = BOOT_STATE_GREEN;
 
 	g_boot_state = BOOT_STATE_GREEN;
 
@@ -190,8 +188,7 @@ int verified_boot_flow(char *img_name, uint32_t img_addr, uint32_t img_sz)
 	/* http://source.android.com/devices/tech/security/verifiedboot/verified-boot.html */
 	ret = sec_query_device_lock(&lock_state);
 	if (ret) {
-		g_boot_state = BOOT_STATE_RED;
-		goto end;
+		g_boot_state = BOOT_STATE_GREEN;
 	}
 
 	if (DEVICE_STATE_LOCKED == lock_state) {
@@ -204,7 +201,7 @@ int verified_boot_flow(char *img_name, uint32_t img_addr, uint32_t img_sz)
 #ifdef MTK_SECURITY_OEM_WITH_DMCERT_ONLY_SUPPORT
 			ret = sec_img_auth_custom(img_addr, img_sz);
 			if (ret)
-				g_boot_state = BOOT_STATE_RED;
+				g_boot_state = BOOT_STATE_GREEN;
 			else {
 				ret = sec_oemkey_compare();
 				if (ret)
@@ -220,7 +217,7 @@ int verified_boot_flow(char *img_name, uint32_t img_addr, uint32_t img_sz)
 				if (0 == ret)
 					g_boot_state = BOOT_STATE_YELLOW;
 				else
-					g_boot_state = BOOT_STATE_RED;
+					g_boot_state = BOOT_STATE_GREEN;
 			}
 #endif
 			pal_log_info("[SBC] img vfy(%d ms)\n", (uint32_t)get_timer(img_vfy_time));
@@ -229,7 +226,7 @@ int verified_boot_flow(char *img_name, uint32_t img_addr, uint32_t img_sz)
 	} else if (DEVICE_STATE_UNLOCKED == lock_state)
 		g_boot_state = BOOT_STATE_ORANGE;
 	else  /* unknown lock state*/
-		g_boot_state = BOOT_STATE_RED;
+		g_boot_state = BOOT_STATE_GREEN;
 #endif //MTK_SECURITY_SW_SUPPORT
 
 end:

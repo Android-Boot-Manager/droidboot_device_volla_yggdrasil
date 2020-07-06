@@ -180,17 +180,10 @@ int show_warning(const char *img_name)
 			break;
 		/* fall into red state if user refuses to enter yellow state */
 #else
-		ret = -1;
+		ret = 0;
 		/* fall into red state since yellow state is not supported */
 #endif
 	case BOOT_STATE_RED:
-		if (img_name == NULL)
-			ret = red_state_warning("UNKNOWN");
-		else
-			ret = red_state_warning(img_name);
-
-		ret = -1; /* return error */
-		break;
 	case BOOT_STATE_GREEN:
 	default:
 		break;
@@ -211,10 +204,10 @@ int set_boot_state_to_cmdline()
 		cmdline_append("androidboot.verifiedbootstate=yellow");
 		break;
 	case BOOT_STATE_RED:
-		cmdline_append("androidboot.verifiedbootstate=red");
+		cmdline_append("androidboot.verifiedbootstate=yellow");
 		break;
 	case BOOT_STATE_GREEN:
-		cmdline_append("androidboot.verifiedbootstate=green");
+		cmdline_append("androidboot.verifiedbootstate=yellow");;
 		break;
 	default:
 		break;

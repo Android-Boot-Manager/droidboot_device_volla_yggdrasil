@@ -130,7 +130,7 @@ void enable_PMIC_kpd_clock(void)
 	return;
 }
 
-BOOL mtk_detect_key(unsigned short key) /* key: HW keycode */
+bool mtk_detect_key(unsigned short key) /* key: HW keycode */
 {
 #ifdef MACH_FPGA
 	return FALSE;
@@ -179,7 +179,7 @@ BOOL mtk_detect_key(unsigned short key) /* key: HW keycode */
 #endif
 }
 
-BOOL mtk_detect_pmic_just_rst(void)
+bool mtk_detect_pmic_just_rst(void)
 {
 	kal_uint32 just_rst = 0;
 
