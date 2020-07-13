@@ -488,7 +488,7 @@ write_part:
 
 #ifdef EMMC_TYPE
 #if (defined(MTK_UFS_SUPPORT) || defined(MTK_NEW_COMBO_EMMC_SUPPORT))
-		dprintf (ALWAYS, "partid %d, addr 0x%llx, size 0x%x\n", part_id, ptn, sz);
+		video_printf ("partid %d, addr 0x%llx, size 0x%x\n", part_id, ptn, sz);
 		if (emmc_write(part_id, ptn , (unsigned int *)data, sz) != sz)
 #else
 		if (emmc_write(ptn , (unsigned int *)data, sz) != sz)

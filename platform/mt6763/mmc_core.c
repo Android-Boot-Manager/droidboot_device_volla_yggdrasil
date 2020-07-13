@@ -33,12 +33,21 @@
 /* HEADER FILES                                                          */
 /*=======================================================================*/
 #include "msdc.h"
-#include "mmc_common_inter.h"
+#include <mmc_common_inter.h>
+#include <err.h>
+#include <block_generic_interface.h>
+//#if WITH_LIB_BIO
+#include <lib/bio.h>
+//#endif
 
+#if WITH_LIB_PARTITION
+#include <lib/partition.h>
+#endif
 #define NR_MMC             (MSDC_MAX_NUM)
 
 static struct mmc_host sd_host[NR_MMC];
 static struct mmc_card sd_card[NR_MMC];
+#define SDHCI_ADMA_MAX_TRANS_SZ                   (65535 * 512)
 
 static const unsigned int tran_exp[] = {
 	10000,      100000,     1000000,    10000000,
@@ -1954,6 +1963,97 @@ void mmc_set_clock(struct mmc_host *host, int ddr, u32 hz)
 	msdc_config_clock(host, ddr, hz, hs_timing);
 }
 
+  #if WITH_LIB_BIO
+  typedef struct mmc_sdhci_bdev {
+  	bdev_t dev; // base device
+  
+  	struct mmc_device *mmcdev;
+  } mmc_sdhci_bdev_t;
+ /* static int mmc_bread(struct bdev *_bdev, u32 blknr, u32 blks, u8 *buf, u32 part_id)
+{
+    mmc_sdhci_bdev_t *bdev = (mmc_sdhci_bdev_t *)_bdev;
+	struct mmc_host *host = (struct mmc_host*)bdev->priv;
+
+	mmc_switch_part(part_id);
+	return mmc_block_read(host->id, (unsigned long)blknr, blks, (unsigned long*)buf);
+}*/
+  static ssize_t mmc_sdhci_bdev_read_block(struct bdev *_bdev, void *buf, bnum_t block, uint count)
+  {
+  	mmc_sdhci_bdev_t *bdev = (mmc_sdhci_bdev_t *)_bdev;
+  
+  	uint32_t ret = 0;
+  	uint32_t block_size = bdev->dev.block_size;
+  	uint32_t read_size = SDHCI_ADMA_MAX_TRANS_SZ;
+  	uint32_t data_len = count * block_size;
+  	uint64_t data_addr = (uint64_t)((uint64_t)block * block_size);
+  	uint8_t *sptr = (uint8_t *)buf;
+  
+  	/*
+  	 * dma onto write back memory is unsafe/nonportable,
+  	 * but callers to this routine normally provide
+  	 * write back buffers. Invalidate cache
+  	 * before read data from mmc.
+           */
+  	arch_clean_invalidate_cache_range((addr_t)(sptr), data_len);
+  
+  	while (data_len > read_size) {
+  		ret = mmc_sdhci_read(bdev->mmcdev, (void *)sptr, (data_addr / block_size), (read_size / block_size));
+  		if (ret)
+  			return ERR_IO;
+  
+  		sptr   += read_size;
+  		data_addr   += read_size;
+  		data_len -= read_size;
+  	}
+  
+  	if (data_len)
+  		ret = mmc_sdhci_read(bdev->mmcdev, (void *)sptr, (data_addr / block_size), (data_len / block_size));
+  
+  	if (ret)
+  		return ERR_IO;
+  	else
+  		return count * block_size;
+  }
+  
+  static ssize_t mmc_sdhci_bdev_write_block(struct bdev *_bdev, const void *buf, bnum_t block, uint count)
+  {
+  	mmc_sdhci_bdev_t *bdev = (mmc_sdhci_bdev_t *)_bdev;
+  
+  	uint32_t val = 0;
+  	uint32_t block_size = bdev->dev.block_size;
+  	uint32_t write_size = SDHCI_ADMA_MAX_TRANS_SZ;
+  	uint32_t data_len = count * block_size;
+  	uint64_t data_addr = (uint64_t)((uint64_t)block * block_size);
+  	uint8_t *sptr = (uint8_t *)buf;
+  
+  	/*
+  	 * Flush the cache before handing over the data to
+  	 * storage driver
+  	 */
+  	arch_clean_invalidate_cache_range((addr_t)sptr, data_len);
+  
+  	while (data_len > write_size) {
+  		val = mmc_sdhci_write(bdev->mmcdev, (void *)sptr, (data_addr / block_size), (write_size / block_size));
+  		if (val)
+  			return ERR_IO;
+  
+  		sptr  += write_size;
+  		data_addr  += write_size;
+  		data_len -= write_size;
+  	}
+  
+  	if (data_len)
+  		val = mmc_sdhci_write(bdev->mmcdev, (void *)sptr, (data_addr / block_size), (data_len / block_size));
+  
+  	if (val)
+  		return ERR_IO;
+  	else
+  		return count * block_size;
+  }
+  #endif
+  
+  
+
 int mmc_set_ext_csd(struct mmc_card *card, uint8 addr, uint8 value)
 {
 	int err;
@@ -3525,7 +3625,6 @@ int mmc_init_mem_card(struct mmc_host *host, struct mmc_card *card, u32 ocr)
 	card->ready = 1;
 
 	msdc_pr_err("[SD%d] Initialized, %s%d\n", id, mmc_card_sd(card)?"SD":"eMMC", card->version);
-
 out:
 	return err;
 }

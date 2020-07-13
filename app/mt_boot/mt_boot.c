@@ -335,7 +335,51 @@ extern unsigned int g_fb_base;
 extern unsigned int g_fb_size;
 unsigned int logo_lk_t = 0;
 bool boot_ftrace = false;
+void hexDump(char *desc, void *addr, int len) 
+{
+    int i;
+    unsigned char buff[17];
+    unsigned char *pc = (unsigned char*)addr;
 
+    // Output description if given.
+    if (desc != NULL)
+        video_printf ("%s:\n", desc);
+
+    // Process every byte in the data.
+    for (i = 0; i < len; i++) {
+        // Multiple of 16 means new line (with line offset).
+
+        if ((i % 16) == 0) {
+            // Just don't print ASCII for the zeroth line.
+            if (i != 0)
+                video_printf("  %s\n", buff);
+
+            // Output the offset.
+            video_printf("  %04x ", i);
+        }
+
+        // Now the hex code for the specific character.
+        video_printf(" %02x", pc[i]);
+
+        // And store a printable ASCII character for later.
+        if ((pc[i] < 0x20) || (pc[i] > 0x7e)) {
+            buff[i % 16] = '.';
+        } else {
+            buff[i % 16] = pc[i];
+        }
+
+        buff[(i % 16) + 1] = '\0';
+    }
+
+    // Pad out last line if not exactly 16 characters.
+    while ((i % 16) != 0) {
+        video_printf("   ");
+        i++;
+    }
+
+    // And print the final ASCII bit.
+    video_printf("  %s\n", buff);
+}
 static void mboot_free_lk_scratch_from_mblock()
 {
 #ifdef ALLOCATE_FROM_MBLOCK
@@ -616,8 +660,10 @@ int mboot_common_get_hall_calidata(char *buf)
 
 int boot_linux_fdt(void *kernel, unsigned *tags,
 		   unsigned machtype,
-		   void *ramdisk, unsigned ramdisk_sz)
+		   void *ramdisk, unsigned ramdisk_sz, unsigned zimage_s, unsigned zimage_ad)
 {
+    video_printf("booting linux 1 @ %p, ramdisk @ %p (%d)\n",
+		kernel, ramdisk, ramdisk_sz);
 	void *fdt = tags;
 	int ret;
 	int offset;
@@ -648,27 +694,38 @@ int boot_linux_fdt(void *kernel, unsigned *tags,
 
 	if (g_is_64bit_kernel) {
 		uint32_t kernel_target_addr = 0;
-
-		zimage_addr = (unsigned int)target_get_scratch_address();
-		zimage_size = get_kernel_real_sz();
+        if(zimage_ad ==NULL){
+		    zimage_addr = (unsigned int)target_get_scratch_address();
+        }
+        else
+        {
+            zimage_addr=zimage_ad;
+        }
+        if(zimage_s ==NULL){
+		    zimage_size = get_kernel_real_sz();
+        }
+        else
+        {
+            zimage_size=zimage_s;
+        }
 		kernel_target_addr = get_kernel_target_addr();
 
-		pal_log_info("64 bits kernel\n");
-		pal_log_info("kernel_sz=0x%08x\n", zimage_size);
+		video_printf("64 bits kernel\n");
+		video_printf("kernel_sz=0x%08x\n", zimage_size);
 
 		if (kernel_target_addr & 0x7FFFF) {
-			pal_log_err("64 bit kernel can't boot at 0x%08x\n",
+			video_printf("64 bit kernel can't boot at 0x%08x\n",
 					kernel_target_addr);
 			while (1);
 		}
 
 		dtb_size = (g_64bit_dtb_size + 0x3) & (~0x3);
 		dtb_addr = (unsigned int)fdt;
-		zimage_size -= dtb_size;
+		//zimage_size -= dtb_size;
 
-		pal_log_info("zimage_addr=0x%08x, zimage_size=0x%08x\n",
+		video_printf("zimage_addr=0x%08x, zimage_size=0x%08x\n",
 				zimage_addr, zimage_size);
-		pal_log_info("decompress kernel image...\n");
+		video_printf("decompress kernel image...\n");
 
 		/* for 64bit decompreesed size.
 		 * LK start: 0x41E00000, Kernel Start: 0x40080000
@@ -680,9 +737,11 @@ int boot_linux_fdt(void *kernel, unsigned *tags,
 		if (decompress_kernel((unsigned char *)zimage_addr,
 				      (void *)kernel_target_addr, (int)zimage_size,
 				      (int)decompress_outbuf_size)) {
-			pal_log_err("decompress kernel image fail!!!\n");
-			while (1);
+			video_printf("decompress kernel image fail!!!\n");
+			//memmove(kernel_target_addr, zimage_addr, zimage_size);
 		}
+    video_printf("kernel ok");
+    hexDump("Linux", kernel_target_addr, 512);
 	} else {
 		pal_log_info("32 bits kernel\n");
 		zimage_size = *(uint32_t *)((uint32_t)kernel + 0x2c) - *
@@ -895,13 +954,16 @@ int boot_linux_fdt(void *kernel, unsigned *tags,
 
 	offset = fdt_path_offset(fdt, "/chosen");
 	ret = fdt_setprop_cell(fdt, offset, "linux,initrd-start",
-			       (unsigned int) ramdisk);
+			       (unsigned int) get_ramdisk_target_addr());
+    hexDump("rdtargetboot", get_ramdisk_target_addr(), 512);
 	if (ret) {
 		assert(0);
 		return FALSE;
 	}
 	ret = fdt_setprop_cell(fdt, offset, "linux,initrd-end",
-			       (unsigned int)ramdisk + ramdisk_sz);
+			       (unsigned int)get_ramdisk_addr() + ramdisk_sz);
+video_printf("booting linux 2@ %p, ramdisk @ %p (%d)\n",
+		kernel, ramdisk, ramdisk_sz);
 	if (ret) {
 		assert(0);
 		return FALSE;
@@ -1369,7 +1431,7 @@ int boot_linux_fdt(void *kernel, unsigned *tags,
 		return FALSE;
 	}
 
-	pal_log_err("booting linux @ %p, ramdisk @ %p (%d)\n",
+	video_printf("booting linux 3 @ %p, ramdisk @ %p (%d)\n",
 		kernel, ramdisk, ramdisk_sz);
 
 	if (strncmp(checker, FDT_BUFF_END, FDT_CHECKER_SIZE) != 0) {
@@ -1480,7 +1542,7 @@ void boot_linux(void *kernel, unsigned *tags,
 #ifdef DEVICE_TREE_SUPPORT
 	boot_linux_fdt((void *)kernel, (unsigned *)tags,
 		       machtype,
-		       (void *)ramdisk, ramdisk_sz);
+		       (void *)ramdisk, ramdisk_sz, NULL, NULL);
 
 	while (1) ;
 #endif
@@ -1503,6 +1565,144 @@ void get_AB_OTA_name(char *part_name, int size)
 }
 #endif /* MTK_AB_OTA_UPDATER */
 
+
+int boot_test(char *kernel_path, char *ramdisk_path, char *cmdline){
+
+	int ret = 0;
+	uint32_t kernel_target_addr = 0;
+	uint32_t ramdisk_target_addr = 0;
+	uint32_t tags_addr = 0;
+	uint32_t ramdisk_addr = 0;
+	uint32_t ramdisk_real_sz = 0;
+    uint32_t kernel_addr = 0;
+#define CMDLINE_TMP_CONCAT_SIZE 110
+	char cmdline_tmpbuf[CMDLINE_TMP_CONCAT_SIZE];
+	switch (g_boot_mode) {
+	case NORMAL_BOOT:
+	case META_BOOT:
+	case ADVMETA_BOOT:
+	case SW_REBOOT:
+	case ALARM_BOOT:
+#ifdef MTK_KERNEL_POWER_OFF_CHARGING
+	case KERNEL_POWER_OFF_CHARGING_BOOT:
+	case LOW_POWER_OFF_CHARGING_BOOT:
+#endif
+		PROFILING_START("load boot image");
+#if defined(CFG_NAND_BOOT)
+		snprintf(cmdline_tmpbuf, CMDLINE_TMP_CONCAT_SIZE, "%s%x%s%x",
+			 NAND_MANF_CMDLINE, nand_flash_man_code, NAND_DEV_CMDLINE, nand_flash_dev_id);
+		cmdline_append(cmdline_tmpbuf);
+#endif
+		ret = load_vfy_boot(BOOTIMG_TYPE_BOOT, CFG_BOOTIMG_LOAD_ADDR);
+		PAL_ASSERT(ret >= 0);
+
+		PROFILING_END();
+		break;
+
+	case RECOVERY_BOOT:
+		/* it's boot.img when system as root is enabled, and is *
+		 * recovery.img when system as root is disabled. *
+		 */
+		PROFILING_START("load recovery image");
+
+		ret = load_vfy_boot(BOOTIMG_TYPE_RECOVERY, CFG_BOOTIMG_LOAD_ADDR);
+		PAL_ASSERT(ret >= 0);
+
+		PROFILING_END();
+		break;
+
+	case FACTORY_BOOT:
+	case ATE_FACTORY_BOOT:
+		/* it's boot.img, we don't have standalone factory image now */
+		PROFILING_START("load factory image");
+#if defined(CFG_NAND_BOOT)
+		snprintf(cmdline_tmpbuf, CMDLINE_TMP_CONCAT_SIZE, "%s%x%s%x",
+			 NAND_MANF_CMDLINE, nand_flash_man_code, NAND_DEV_CMDLINE, nand_flash_dev_id);
+		cmdline_append(cmdline_tmpbuf);
+#endif
+		ret = load_vfy_boot(BOOTIMG_TYPE_BOOT, CFG_BOOTIMG_LOAD_ADDR);
+		PAL_ASSERT(ret >= 0);
+
+		PROFILING_END();
+		break;
+
+	case FASTBOOT:
+	case DOWNLOAD_BOOT:
+	case UNKNOWN_BOOT:
+		break;
+
+	}
+    kernel_target_addr = get_kernel_target_addr();
+	ramdisk_target_addr = get_ramdisk_target_addr();
+	ramdisk_addr = get_ramdisk_addr();
+	ramdisk_real_sz = get_ramdisk_real_sz();
+	tags_addr = get_tags_addr();
+    kernel_addr = get_kernel_target_addr();
+	unsigned char *kernel_raw = NULL;
+	off_t kernel_raw_size = 0;
+	off_t ramdisk_size = 0;
+	off_t dtb_size = 0;
+
+	unsigned int dev_null;
+	printf("booting from ext2 partition 'system'\n");
+
+	if(fs_mount("/boot", "ext2", "cache")) {
+		printf("fs_mount failed\n");
+		return -1;
+	}
+
+	kernel_raw_size = fs_get_file_size(kernel_path);
+	if(!kernel_raw_size) {
+		printf("fs_get_file_size (%s) failed\n", kernel_path);
+		fs_unmount("/boot");
+		return -1;
+	}
+	kernel_raw = ramdisk_addr; //right where the biggest possible decompressed kernel would end; sure to be out of the way
+    
+	if(fs_load_file(kernel_path, kernel_raw, kernel_raw_size) < 0) {
+		printf("failed loading %s at %p\n", kernel_path, kernel_addr);
+		fs_unmount("/boot");
+		return -1;
+	}
+
+
+	
+	memcpy(kernel_target_addr, kernel_raw, kernel_raw_size);
+    memcpy(target_get_scratch_address(), kernel_raw, kernel_raw_size);
+    //hexDump("Linux", kernel_target_addr, 512);
+    //hexDump("Linux", target_get_scratch_address(), 512);
+	kernel_raw = NULL; //get rid of dangerous reference to ramdisk_addr before it can do harm
+
+	ramdisk_size = fs_get_file_size(ramdisk_path);
+	if (!ramdisk_size) {
+		printf("fs_get_file_size (%s) failed\n", ramdisk_path);
+		fs_unmount("/boot");
+		return -1;
+	}
+
+	if(fs_load_file(ramdisk_path, ramdisk_addr, ramdisk_size) < 0) {
+		printf("failed loading %s at %p\n", ramdisk_path, ramdisk_addr);
+		fs_unmount("/boot");
+        return -1;
+	}
+    
+    memcpy(ramdisk_target_addr, ramdisk_addr, ramdisk_size);
+    memcpy(kernel_target_addr+kernel_raw_size, ramdisk_addr, ramdisk_size);
+    hexDump("rd", ramdisk_addr, 512);
+    hexDump("rdtarget", ramdisk_target_addr, 512);
+
+	fs_unmount("/boot");
+
+    video_printf("Booting linux kerneladdr: %d, tags_addr: %d, ramdisk add: %d, ramdisk size: %d \n", kernel_addr,  tags_addr, ramdisk_addr, ramdisk_size);
+    	boot_linux_fdt((void *)kernel_addr,
+			(unsigned *)tags_addr,
+		   	board_machtype(),
+			(void *)ramdisk_target_addr,
+			ramdisk_real_sz, kernel_raw_size, kernel_addr);
+    video_printf("failed \n");
+
+	return -1; //something went wrong*/
+}
 int boot_linux_from_storage(void)
 {
 	int ret = 0;
@@ -1702,6 +1902,7 @@ int get_serial(u64 hwkey, u32 chipid, char ser[SERIALNO_LEN])
 	return 0;
 }
 #endif /* CONFIG_MTK_USB_UNIQUE_SERIAL */
+
 
 #ifdef SERIAL_NUM_FROM_BARCODE
 static inline int read_product_info(char *buf)

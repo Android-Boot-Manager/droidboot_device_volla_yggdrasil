@@ -27,6 +27,7 @@
 #include <list.h>
 #include <lib/bio.h>
 #include <kernel/mutex.h>
+#include <video.h>
 
 #define LOCAL_TRACE 0
 
@@ -40,6 +41,7 @@ static struct bdev_struct *bdevs;
 /* default implementation is to use the read_block hook to 'deblock' the device */
 static ssize_t bio_default_read(struct bdev *dev, void *_buf, off_t offset, size_t len)
 {
+video_printf("kyky \n");
 	uint8_t *buf = (uint8_t *)_buf;
 	ssize_t bytes_read = 0;
 	bnum_t block;
@@ -49,7 +51,7 @@ static ssize_t bio_default_read(struct bdev *dev, void *_buf, off_t offset, size
 	/* find the starting block */
 	block = offset / dev->block_size;
 
-	LTRACEF("buf %p, offset %lld, block %u, len %zd\n", buf, offset, block, len);
+	video_printf("buf %p, offset %lld, block %u, len %zd\n", buf, offset, block, len);
 	/* handle partial first block */
 	if ((offset % dev->block_size) != 0) {
 		/* read in the block */
@@ -69,7 +71,7 @@ static ssize_t bio_default_read(struct bdev *dev, void *_buf, off_t offset, size
 		block++;
 	}
 
-	LTRACEF("buf %p, block %u, len %zd\n", buf, block, len);
+	video_printf("buf %p, block %u, len %zd\n", buf, block, len);
 	/* handle middle blocks */
 	if (len >= dev->block_size) {
 		/* do the middle reads */
@@ -88,7 +90,7 @@ static ssize_t bio_default_read(struct bdev *dev, void *_buf, off_t offset, size
 		block += block_count;
 	}
 
-	LTRACEF("buf %p, block %u, len %zd\n", buf, block, len);
+	video_printf("buf %p, block %u, len %zd\n", buf, block, len);
 	/* handle partial last block */
 	if (len > 0) {
 		/* read the block */
@@ -118,7 +120,7 @@ static ssize_t bio_default_write(struct bdev *dev, const void *_buf, off_t offse
 	/* find the starting block */
 	block = offset / dev->block_size;
 
-	LTRACEF("buf %p, offset %lld, block %u, len %zd\n", buf, offset, block, len);
+	video_printf("buf %p, offset %lld, block %u, len %zd\n", buf, offset, block, len);
 	/* handle partial first block */
 	if ((offset % dev->block_size) != 0) {
 		/* read in the block */
@@ -143,7 +145,7 @@ static ssize_t bio_default_write(struct bdev *dev, const void *_buf, off_t offse
 		block++;
 	}
 
-	LTRACEF("buf %p, block %u, len %zd\n", buf, block, len);
+	video_printf("buf %p, block %u, len %zd\n", buf, block, len);
 	/* handle middle blocks */
 	if (len >= dev->block_size) {
 		/* do the middle writes */
@@ -162,7 +164,7 @@ static ssize_t bio_default_write(struct bdev *dev, const void *_buf, off_t offse
 		block += block_count;
 	}
 
-	LTRACEF("buf %p, block %u, len %zd\n", buf, block, len);
+	video_printf("buf %p, block %u, len %zd\n", buf, block, len);
 	/* handle partial last block */
 	if (len > 0) {
 		/* read the block */
@@ -188,6 +190,7 @@ err:
 
 static ssize_t bio_default_erase(struct bdev *dev, off_t offset, size_t len)
 {
+video_printf("bio erase ky");
 	/* default erase operation is to just write zeros over the device */
 #define ERASE_BUF_SIZE 4096
 	uint8_t *zero_buf;
@@ -260,6 +263,7 @@ bdev_t *bio_open(const char *name)
 			bdev_inc_ref(bdev);
 			break;
 		}
+    video_printf("Entry: %s \n",entry->name);
 	}
 	mutex_release(&bdevs->lock);
 
@@ -275,9 +279,9 @@ void bio_close(bdev_t *dev)
 
 ssize_t bio_read(bdev_t *dev, void *buf, off_t offset, size_t len)
 {
-	LTRACEF("dev '%s', buf %p, offset %lld, len %zd\n", dev->name, buf, offset, len);
+	
 
-	DEBUG_ASSERT(dev->ref > 0);	
+	DEBUG_ASSERT(dev->ref > 0);
 
 	/* range check */
 	if (offset < 0)
@@ -288,14 +292,14 @@ ssize_t bio_read(bdev_t *dev, void *buf, off_t offset, size_t len)
 		return 0;
 	if (offset + len > dev->size)
 		len = dev->size - offset;
-
+    //ideo_printf("bio read dev '%s', buf %p, offset %lld, len %zd\n", dev->name, buf, offset, len);
 	return dev->read(dev, buf, offset, len);
 }
 
 ssize_t bio_read_block(bdev_t *dev, void *buf, bnum_t block, uint count)
 {
-	LTRACEF("dev '%s', buf %p, block %d, count %u\n", dev->name, buf, block, count);
-		
+	//video_printf("read blockdev '%s', buf %p, block %d, count %u\n", dev->name, buf, block, count);
+
 	DEBUG_ASSERT(dev->ref > 0);
 
 	/* range check */
@@ -311,8 +315,8 @@ ssize_t bio_read_block(bdev_t *dev, void *buf, bnum_t block, uint count)
 
 ssize_t bio_write(bdev_t *dev, const void *buf, off_t offset, size_t len)
 {
-	LTRACEF("dev '%s', buf %p, offset %lld, len %zd\n", dev->name, buf, offset, len);
-		
+	video_printf("dev '%s', buf %p, offset %lld, len %zd\n", dev->name, buf, offset, len);
+
 	DEBUG_ASSERT(dev->ref > 0);
 
 	/* range check */
@@ -330,7 +334,7 @@ ssize_t bio_write(bdev_t *dev, const void *buf, off_t offset, size_t len)
 
 ssize_t bio_write_block(bdev_t *dev, const void *buf, bnum_t block, uint count)
 {
-	LTRACEF("dev '%s', buf %p, block %d, count %u\n", dev->name, buf, block, count);
+	video_printf("dev '%s', buf %p, block %d, count %u\n", dev->name, buf, block, count);
 
 	DEBUG_ASSERT(dev->ref > 0);
 
@@ -347,8 +351,8 @@ ssize_t bio_write_block(bdev_t *dev, const void *buf, bnum_t block, uint count)
 
 ssize_t bio_erase(bdev_t *dev, off_t offset, size_t len)
 {
-	LTRACEF("dev '%s', offset %lld, len %zd\n", dev->name, offset, len);
-		
+	video_printf("dev '%s', offset %lld, len %zd\n", dev->name, offset, len);
+
 	DEBUG_ASSERT(dev->ref > 0);
 
 	/* range check */
@@ -366,7 +370,7 @@ ssize_t bio_erase(bdev_t *dev, off_t offset, size_t len)
 
 int bio_ioctl(bdev_t *dev, int request, void *argp)
 {
-	LTRACEF("dev '%s', request %08x, argp %p\n", dev->name, request, argp);
+	video_printf("dev '%s', request %08x, argp %p\n", dev->name, request, argp);
 
 	if (dev->ioctl == NULL) {
 		return ERR_NOT_SUPPORTED;
@@ -387,6 +391,9 @@ void bio_initialize_bdev(bdev_t *dev, const char *name, size_t block_size, bnum_
 	dev->block_count = block_count;
 	dev->size = (off_t)block_count * block_size;
 	dev->ref = 0;
+	dev->label = NULL;
+	dev->is_gpt = false;
+	dev->is_subdev = false;
 
 	/* set up the default hooks, the sub driver should override the block operations at least */
 	dev->read = bio_default_read;
@@ -395,26 +402,28 @@ void bio_initialize_bdev(bdev_t *dev, const char *name, size_t block_size, bnum_
 	dev->write_block = bio_default_write_block;
 	dev->erase = bio_default_erase;
 	dev->close = NULL;
+    video_printf("BIO init done, device: %s", dev->name);
 }
 
 void bio_register_device(bdev_t *dev)
 {
 	DEBUG_ASSERT(dev);
 
-	LTRACEF(" '%s'\n", dev->name);
+	video_printf(" '%s'\n", dev->name);
 
 	bdev_inc_ref(dev);
 
 	mutex_acquire(&bdevs->lock);
 	list_add_head(&bdevs->list, &dev->node);
 	mutex_release(&bdevs->lock);
+    video_printf("BIO register done");
 }
 
 void bio_unregister_device(bdev_t *dev)
 {
 	DEBUG_ASSERT(dev);
 
-	LTRACEF(" '%s'\n", dev->name);
+	video_printf(" '%s'\n", dev->name);
 
 	// remove it from the list
 	mutex_acquire(&bdevs->lock);
@@ -426,11 +435,11 @@ void bio_unregister_device(bdev_t *dev)
 
 void bio_dump_devices(void)
 {
-	printf("block devices:\n");
+	video_printf("block devices:\n");
 	bdev_t *entry;
 	mutex_acquire(&bdevs->lock);
 	list_for_every_entry(&bdevs->list, entry, bdev_t, node) {
-		printf("\t%s, size %lld, bsize %zd, ref %d\n", entry->name, entry->size, entry->block_size, entry->ref);
+		video_printf("\t%s, size %lld, bsize %zd, ref %d\n", entry->name, entry->size, entry->block_size, entry->ref);
 	}
 	mutex_release(&bdevs->lock);
 }
@@ -442,4 +451,5 @@ void bio_init(void)
 	list_initialize(&bdevs->list);
 	mutex_init(&bdevs->lock);
 }
+
 

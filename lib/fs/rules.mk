@@ -1,8 +1,8 @@
 LOCAL_DIR := $(GET_LOCAL_DIR)
 
-MODULES += \
+MODULES += lib/bio 
 
-#	lib/fs/ext2
+MODULES += lib/fs/ext2
 
 OBJS += \
 	$(LOCAL_DIR)/fs.o \

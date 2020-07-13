@@ -1,0 +1,162 @@
+platform/mt6763/mmc_common_inter.c:	struct mmc_host *host = (struct mmc_host*)bdev->priv;
+platform/mt6763/mmc_common_inter.c:	struct mmc_host *host = (struct mmc_host*)bdev->priv;
+platform/mt6763/mmc_common_inter.c:	if (bdev && bdev->priv) {
+platform/mt6763/mmc_common_inter.c:		host = (struct mmc_host*)bdev->priv;
+platform/mt6763/mmc_common_inter.c:	if (bdev && bdev->priv) {
+platform/mt6763/mmc_common_inter.c:		host = (struct mmc_host*)bdev->priv;
+platform/mt6763/mmc_common_inter.c:		bdev->dev         = id;
+platform/mt6763/mmc_common_inter.c:		bdev->type        = BOOTDEV_SDMMC;
+platform/mt6763/mmc_common_inter.c:		bdev->blksz       = MMC_BLOCK_SIZE;
+platform/mt6763/mmc_common_inter.c:			bdev->erasesz = card->ext_csd.hc_erase_grp_sz * 512 * 1024;
+platform/mt6763/mmc_common_inter.c:			bdev->erasesz = card->csd.erase_sctsz * 512;
+platform/mt6763/mmc_common_inter.c:		bdev->lba         = card->nblks * card->blklen / MMC_BLOCK_SIZE;
+platform/mt6763/mmc_common_inter.c:		bdev->blk_bits    = 9;
+platform/mt6763/mmc_common_inter.c:		bdev->part_boot1  = EMMC_PART_BOOT1;
+platform/mt6763/mmc_common_inter.c:		bdev->part_boot2  = EMMC_PART_BOOT2;
+platform/mt6763/mmc_common_inter.c:		bdev->part_user   = EMMC_PART_USER;
+platform/mt6763/mmc_common_inter.c:		bdev->block_read  = mmc_wrap_bread;
+platform/mt6763/mmc_common_inter.c:		bdev->block_write = mmc_wrap_bwrite;
+platform/mt6763/mmc_core.c:	struct mmc_host *host = (struct mmc_host*)bdev->priv;
+platform/mt6763/mmc_core.c:  	uint32_t block_size = bdev->dev.block_size;
+platform/mt6763/mmc_core.c:  		ret = mmc_sdhci_read(bdev->mmcdev, (void *)sptr, (data_addr / block_size), (read_size / block_size));
+platform/mt6763/mmc_core.c:  		ret = mmc_sdhci_read(bdev->mmcdev, (void *)sptr, (data_addr / block_size), (data_len / block_size));
+platform/mt6763/mmc_core.c:  	uint32_t block_size = bdev->dev.block_size;
+platform/mt6763/mmc_core.c:  		val = mmc_sdhci_write(bdev->mmcdev, (void *)sptr, (data_addr / block_size), (write_size / block_size));
+platform/mt6763/mmc_core.c:  		val = mmc_sdhci_write(bdev->mmcdev, (void *)sptr, (data_addr / block_size), (data_len / block_size));
+platform/mt6757/mmc_common_inter.c:	bdev->offset = 0;
+platform/mt6757/mmc_common_inter.c:			bdev->offset += size[i];
+platform/mt6757/mmc_common_inter.c:		bdev->offset /= bdev->blksz; /* in blksz unit */
+platform/mt6757/mmc_common_inter.c:	struct mmc_host *host = (struct mmc_host*)bdev->priv;
+platform/mt6757/mmc_common_inter.c:	struct mmc_host *host = (struct mmc_host*)bdev->priv;
+platform/mt6757/mmc_common_inter.c:	if (bdev && bdev->priv) {
+platform/mt6757/mmc_common_inter.c:		host = (struct mmc_host*)bdev->priv;
+platform/mt6757/mmc_common_inter.c:	if (bdev && bdev->priv) {
+platform/mt6757/mmc_common_inter.c:		host = (struct mmc_host*)bdev->priv;
+platform/mt6757/mmc_common_inter.c:		bdev->dev         = id;
+platform/mt6757/mmc_common_inter.c:		bdev->type        = BOOTDEV_SDMMC;
+platform/mt6757/mmc_common_inter.c:		bdev->blksz       = MMC_BLOCK_SIZE;
+platform/mt6757/mmc_common_inter.c:			bdev->erasesz = card->ext_csd.hc_erase_grp_sz * 512 * 1024;
+platform/mt6757/mmc_common_inter.c:			bdev->erasesz = card->csd.erase_sctsz * 512;
+platform/mt6757/mmc_common_inter.c:		bdev->lba         = card->nblks * card->blklen / MMC_BLOCK_SIZE;
+platform/mt6757/mmc_common_inter.c:		bdev->blk_bits    = 9;
+platform/mt6757/mmc_common_inter.c:		bdev->part_boot1  = EMMC_PART_BOOT1;
+platform/mt6757/mmc_common_inter.c:		bdev->part_boot2  = EMMC_PART_BOOT2;
+platform/mt6757/mmc_common_inter.c:		bdev->part_user   = EMMC_PART_USER;
+platform/mt6757/mmc_common_inter.c:		bdev->block_read  = mmc_wrap_bread;
+platform/mt6757/mmc_common_inter.c:		bdev->block_write = mmc_wrap_bwrite;
+platform/common/storage/ufs/ufs_aio_blkdev.c:	bdev->next = NULL;
+platform/common/storage/ufs/ufs_aio_blkdev.c:		if (bdev->type == type)
+platform/common/storage/ufs/ufs_aio_blkdev.c:		bdev = bdev->next;
+platform/common/storage/ufs/ufs_aio_blkdev.c:	return bdev->bread(bdev, blknr, blks, buf, lu);
+platform/common/storage/ufs/ufs_aio_blkdev.c:	return bdev->bwrite(bdev, blknr, blks, buf, lu);
+platform/common/storage/ufs/ufs_aio_blkdev.c:	u8 *buf = (u8*)bdev->blkbuf;
+platform/common/storage/ufs/ufs_aio_blkdev.c:	u32 blksz = bdev->blksz;
+platform/common/storage/ufs/ufs_aio_blkdev.c:		if ((bdev->bread(bdev, blknr, 1, buf, lu)) != 0)
+platform/common/storage/ufs/ufs_aio_blkdev.c:		if (blks && 0 != bdev->bread(bdev, blknr, blks, dst, lu))
+platform/common/storage/ufs/ufs_aio_blkdev.c:		if ((bdev->bread(bdev, blknr, 1, buf, lu)) != 0)
+platform/common/storage/ufs/ufs_aio_blkdev.c:	u8 *buf = (u8*)bdev->blkbuf;
+platform/common/storage/ufs/ufs_aio_blkdev.c:	u32 blksz = bdev->blksz;
+platform/common/storage/ufs/ufs_aio_blkdev.c:		if ((bdev->bread(bdev, blknr, 1, buf, lu)) != 0)
+platform/common/storage/ufs/ufs_aio_blkdev.c:		if ((bdev->bwrite(bdev, blknr, 1, buf, lu)) != 0)
+platform/common/storage/ufs/ufs_aio_blkdev.c:		if (blks && 0 != bdev->bwrite(bdev, blknr, blks, src, lu))
+platform/common/storage/ufs/ufs_aio_blkdev.c:		if ((bdev->bread(bdev, blknr, 1, buf, lu)) != 0)
+platform/common/storage/ufs/ufs_aio_blkdev.c:		if ((bdev->bwrite(bdev, blknr, 1, buf, lu)) != 0)
+platform/common/storage/ufs/ufs_aio_interface.c:		bdev->dev         = UFS_DEFAULT_HOST_ID;
+platform/common/storage/ufs/ufs_aio_interface.c:		bdev->type        = BOOTDEV_UFS;
+platform/common/storage/ufs/ufs_aio_interface.c:		bdev->blksz       = UFS_BLOCK_SIZE;
+platform/common/storage/ufs/ufs_aio_interface.c:		bdev->blk_bits    = 12;
+platform/common/storage/ufs/ufs_aio_interface.c:		bdev->part_boot1  = UFS_LU_BOOT1;
+platform/common/storage/ufs/ufs_aio_interface.c:		bdev->part_boot2  = UFS_LU_BOOT2;
+platform/common/storage/ufs/ufs_aio_interface.c:		bdev->part_user   = UFS_LU_USER;
+platform/common/storage/ufs/ufs_aio_interface.c:		bdev->block_read  = ufs_wrap_bread;
+platform/common/storage/ufs/ufs_aio_interface.c:		bdev->block_write = ufs_wrap_bwrite;
+platform/common/storage/ufs/ufs_aio_interface.c:	if ((start_addr % bdev->blksz) || (len % bdev->blksz)) {
+platform/common/storage/ufs/ufs_aio_interface.c:	end_blk = (u32)((start_addr + len) / (u64)bdev->blksz) - 1;
+platform/common/storage/ufs/ufs_aio_interface.c:	start_blk = (u32)(start_addr / (u64)bdev->blksz);
+platform/common/storage/ufs/ufs_aio_interface.c:	bdev->type = BLKDEV_UFS;
+platform/common/storage/ufs/ufs_aio_interface.c:	bdev->blkbuf = (u8 *)&g_ufs_internal_buf[0];
+platform/common/storage/ufs/ufs_aio_interface.c:	bdev->blksz = UFS_BLOCK_SIZE;
+platform/common/storage/ufs/ufs_aio_interface.c:	bdev->erasesz = UFS_BLOCK_SIZE;
+platform/common/storage/ufs/ufs_aio_interface.c:	bdev->bread = ufs_bread;
+platform/common/storage/ufs/ufs_aio_interface.c:	bdev->bwrite = ufs_bwrite;
+platform/common/storage/ufs/ufs_aio_interface.c:	//bdev->blks = card->nblks;
+platform/common/storage/ufs/ufs_aio_interface.c:	//bdev->priv = NULL;
+platform/common/storage/mmc/mmc_common_inter.c:	struct mmc_host *host = (struct mmc_host*)bdev->priv;
+platform/common/storage/mmc/mmc_common_inter.c:	struct mmc_host *host = (struct mmc_host*)bdev->priv;
+platform/common/storage/mmc/mmc_common_inter.c:	if (bdev && bdev->priv) {
+platform/common/storage/mmc/mmc_common_inter.c:		host = (struct mmc_host*)bdev->priv;
+platform/common/storage/mmc/mmc_common_inter.c:	if (bdev && bdev->priv) {
+platform/common/storage/mmc/mmc_common_inter.c:		host = (struct mmc_host*)bdev->priv;
+platform/common/storage/mmc/mmc_common_inter.c:		bdev->dev         = id;
+platform/common/storage/mmc/mmc_common_inter.c:		bdev->type        = BOOTDEV_SDMMC;
+platform/common/storage/mmc/mmc_common_inter.c:		bdev->blksz       = MMC_BLOCK_SIZE;
+platform/common/storage/mmc/mmc_common_inter.c:			bdev->erasesz = card->ext_csd.hc_erase_grp_sz * 512 * 1024;
+platform/common/storage/mmc/mmc_common_inter.c:			bdev->erasesz = card->csd.erase_sctsz * 512;
+platform/common/storage/mmc/mmc_common_inter.c:		bdev->lba         = card->nblks * card->blklen / MMC_BLOCK_SIZE;
+platform/common/storage/mmc/mmc_common_inter.c:		bdev->blk_bits    = 9;
+platform/common/storage/mmc/mmc_common_inter.c:		bdev->part_boot1  = EMMC_PART_BOOT1;
+platform/common/storage/mmc/mmc_common_inter.c:		bdev->part_boot2  = EMMC_PART_BOOT2;
+platform/common/storage/mmc/mmc_common_inter.c:		bdev->part_user   = EMMC_PART_USER;
+platform/common/storage/mmc/mmc_common_inter.c:		bdev->block_read  = mmc_wrap_bread;
+platform/common/storage/mmc/mmc_common_inter.c:		bdev->block_write = mmc_wrap_bwrite;
+build-k63v2_64_bsp/lk.debug.lst:		bdev->dev         = id;
+build-k63v2_64_bsp/lk.debug.lst:		bdev->dev         = id;
+build-k63v2_64_bsp/lk.debug.lst:		bdev->dev         = id;
+build-k63v2_64_bsp/lk.debug.lst:		bdev->lba         = card->nblks * card->blklen / MMC_BLOCK_SIZE;
+build-k63v2_64_bsp/lk.debug.lst:		bdev->dev         = id;
+build-k63v2_64_bsp/lk.debug.lst:		bdev->dev         = id;
+build-k63v2_64_bsp/lk.debug.lst:		bdev->blksz       = MMC_BLOCK_SIZE;
+build-k63v2_64_bsp/lk.debug.lst:		bdev->dev         = id;
+build-k63v2_64_bsp/lk.debug.lst:		bdev->dev         = id;
+build-k63v2_64_bsp/lk.debug.lst:		bdev->dev         = id;
+build-k63v2_64_bsp/lk.debug.lst:		bdev->dev         = id;
+build-k63v2_64_bsp/lk.debug.lst:		bdev->type        = BOOTDEV_SDMMC;
+build-k63v2_64_bsp/lk.debug.lst:			bdev->erasesz = card->ext_csd.hc_erase_grp_sz * 512 * 1024;
+build-k63v2_64_bsp/lk.debug.lst:			bdev->erasesz = card->csd.erase_sctsz * 512;
+build-k63v2_64_bsp/lk.debug.lst:		bdev->type        = BOOTDEV_SDMMC;
+build-k63v2_64_bsp/lk.debug.lst:		bdev->blk_bits    = 9;
+build-k63v2_64_bsp/lk.debug.lst:		bdev->block_read  = mmc_wrap_bread;
+build-k63v2_64_bsp/lk.debug.lst:			bdev->erasesz = card->ext_csd.hc_erase_grp_sz * 512 * 1024;
+build-k63v2_64_bsp/lk.debug.lst:			bdev->erasesz = card->csd.erase_sctsz * 512;
+build-k63v2_64_bsp/lk.debug.lst:		bdev->lba         = card->nblks * card->blklen / MMC_BLOCK_SIZE;
+build-k63v2_64_bsp/lk.debug.lst:		bdev->block_write = mmc_wrap_bwrite;
+build-k63v2_64_bsp/lk.debug.lst:		bdev->dev         = id;
+build-k63v2_64_bsp/lk.debug.lst:		bdev->block_read  = mmc_wrap_bread;
+build-k63v2_64_bsp/lk.debug.lst:		bdev->blksz       = MMC_BLOCK_SIZE;
+build-k63v2_64_bsp/lk.debug.lst:		bdev->lba         = card->nblks * card->blklen / MMC_BLOCK_SIZE;
+build-k63v2_64_bsp/lk.debug.lst:		bdev->part_boot1  = EMMC_PART_BOOT1;
+build-k63v2_64_bsp/lk.debug.lst:		bdev->part_boot2  = EMMC_PART_BOOT2;
+build-k63v2_64_bsp/lk.debug.lst:		bdev->part_user   = EMMC_PART_USER;
+build-k63v2_64_bsp/lk.debug.lst:		bdev->block_write = mmc_wrap_bwrite;
+build-k63v2_64_bsp/lk.debug.lst:		bdev->block_read  = mmc_wrap_bread;
+build-k63v2_64_bsp/lk.debug.lst:		bdev->blk_bits    = 9;
+build-k63v2_64_bsp/lk.debug.lst:		bdev->part_boot2  = EMMC_PART_BOOT2;
+build-k63v2_64_bsp/lk.debug.lst:		bdev->part_user   = EMMC_PART_USER;
+build-k63v2_64_bsp/lk.debug.lst:		bdev->part_boot1  = EMMC_PART_BOOT1;
+build-k63v2_64_bsp/lk.debug.lst:    //partition_read(bdev->handle, block, buf, count);
+build-k63v2_64_bsp/lk.debug.lst:	bio_initialize_bdev(&bdev->dev, name, card->blklen, card->nblks);
+build-k63v2_64_bsp/lk.debug.lst:	bio_initialize_bdev(&bdev->dev, name, card->blklen, card->nblks);
+build-k63v2_64_bsp/lk.debug.lst:	bdev->mmcdev = card;
+build-k63v2_64_bsp/lk.debug.lst:	bdev->dev.read_block = bdev_read_block;
+build-k63v2_64_bsp/lk.debug.lst:	//bdev->dev.write_block = mmc_sdhci_bdev_write_block;
+build-k63v2_64_bsp/lk.debug.lst:	bio_register_device(&bdev->dev);
+build-k63v2_64_bsp/lk.debug.lst:	bdev->mmcdev = card;
+build-k63v2_64_bsp/lk.debug.lst:	bdev->dev.read_block = bdev_read_block;
+build-k63v2_64_bsp/lk.debug.lst:	bio_register_device(&bdev->dev);
+app/mt_boot/dualboot.c:    partition_read(bdev->dev.handle, block, buf, count);
+app/mt_boot/dualboot.c:	bio_initialize_bdev(&bdev->dev, name, card->blklen, card->nblks);
+app/mt_boot/dualboot.c:	bdev->mmcdev = card;
+app/mt_boot/dualboot.c:	bdev->dev.read_block = bdev_read_block;
+app/mt_boot/dualboot.c:	//bdev->dev.write_block = mmc_sdhci_bdev_write_block;
+app/mt_boot/dualboot.c:	bio_register_device(&bdev->dev);
+lib/bio/mem.c:	LTRACEF("bdev %s, buf %p, offset %lld, len %zu\n", bdev->name, buf, offset, len);
+lib/bio/mem.c:	LTRACEF("bdev %s, buf %p, block %u, count %u\n", bdev->name, buf, block, count);
+lib/bio/mem.c:	LTRACEF("bdev %s, buf %p, offset %lld, len %zu\n", bdev->name, buf, offset, len);
+lib/bio/mem.c:	LTRACEF("bdev %s, buf %p, block %u, count %u\n", bdev->name, buf, block, count);
+lib/bio/subdev.c:	return bio_read(subdev->parent, buf, offset + subdev->offset * subdev->dev.block_size, len);
+lib/bio/subdev.c:	return bio_read_block(subdev->parent, buf, block + subdev->offset, count);
+lib/bio/subdev.c:	return bio_write(subdev->parent, buf, offset + subdev->offset * subdev->dev.block_size, len);
+lib/bio/subdev.c:	return bio_write_block(subdev->parent, buf, block + subdev->offset, count);
+lib/bio/subdev.c:	return bio_erase(subdev->parent, offset + subdev->offset * subdev->dev.block_size, len);
+lib/bio/subdev.c:	bio_close(subdev->parent);
+lib/bio/subdev.c:	subdev->parent = NULL;

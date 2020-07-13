@@ -28,6 +28,7 @@
 * OR REFUND ANY SOFTWARE LICENSE FEES OR SERVICE CHARGE PAID BY RECEIVER TO
 * MEDIATEK FOR SUCH MEDIATEK SOFTWARE AT ISSUE.
 */
+#include <video.h>
 #include <stdint.h>
 #include <printf.h>
 #include <malloc.h>
@@ -181,6 +182,7 @@ static int mt_part_generic_read(part_dev_t *dev, u64 src, uchar *dst, int size, 
 
 static int mt_part_generic_write(part_dev_t *dev, uchar *src, u64 dst, int size, unsigned int part_id)
 {
+video_printf("generic write");
 	int dev_id = dev->id;
 	uchar *buf;
 	block_dev_desc_t *blkdev = dev->blkdev;

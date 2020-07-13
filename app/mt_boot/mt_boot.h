@@ -63,7 +63,7 @@ void Debug_log_EMI_MPU(void) __attribute__((weak));
 #ifdef MTK_AB_OTA_UPDATER
 void get_AB_OTA_name(char *part_name, int size);
 #endif /* MTK_AB_OTA_UPDATER */
-
+static int boot_linux_from_ext2(char *kernel_path, char *ramdisk_path, char *cmdline);
 bool get_atm_enable_status(void);
 bool cmdline_append(const char *append_string);
 void mboot_allocate_bootimg_from_mblock(struct bootimg_hdr *p_boot_hdr);

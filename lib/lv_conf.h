@@ -338,18 +338,18 @@ typedef void * lv_indev_drv_user_data_t;            /*Type of user data in the i
  * https://fonts.google.com/specimen/Montserrat  */
 #define LV_FONT_MONTSERRAT_12    0
 #define LV_FONT_MONTSERRAT_14    0
-#define LV_FONT_MONTSERRAT_16    1
-#define LV_FONT_MONTSERRAT_18    1
-#define LV_FONT_MONTSERRAT_20    1
+#define LV_FONT_MONTSERRAT_16    0
+#define LV_FONT_MONTSERRAT_18    0
+#define LV_FONT_MONTSERRAT_20    0
 #define LV_FONT_MONTSERRAT_22    0
-#define LV_FONT_MONTSERRAT_24    1
+#define LV_FONT_MONTSERRAT_24    0
 #define LV_FONT_MONTSERRAT_26    0
 #define LV_FONT_MONTSERRAT_28    0
-#define LV_FONT_MONTSERRAT_30    1
+#define LV_FONT_MONTSERRAT_30    0
 #define LV_FONT_MONTSERRAT_32    0
 #define LV_FONT_MONTSERRAT_34    0
 #define LV_FONT_MONTSERRAT_36    0
-#define LV_FONT_MONTSERRAT_38    1
+#define LV_FONT_MONTSERRAT_38    0
 #define LV_FONT_MONTSERRAT_40    0
 #define LV_FONT_MONTSERRAT_42    0
 #define LV_FONT_MONTSERRAT_44    0
@@ -420,9 +420,9 @@ typedef void * lv_font_user_data_t;
 #define LV_THEME_DEFAULT_COLOR_PRIMARY      LV_COLOR_RED
 #define LV_THEME_DEFAULT_COLOR_SECONDARY    LV_COLOR_BLUE
 #define LV_THEME_DEFAULT_FLAG               LV_THEME_MATERIAL_FLAG_LIGHT
-#define LV_THEME_DEFAULT_FONT_SMALL         &lv_font_montserrat_24 
-#define LV_THEME_DEFAULT_FONT_NORMAL        &lv_font_montserrat_30
-#define LV_THEME_DEFAULT_FONT_SUBTITLE      &lv_font_montserrat_38
+#define LV_THEME_DEFAULT_FONT_SMALL         &lv_font_montserrat_46 
+#define LV_THEME_DEFAULT_FONT_NORMAL        &lv_font_montserrat_46
+#define LV_THEME_DEFAULT_FONT_SUBTITLE      &lv_font_montserrat_46
 #define LV_THEME_DEFAULT_FONT_TITLE         &lv_font_montserrat_46
 #define USE_LV_THEME_NIGHT 1
 /*=================
@@ -499,14 +499,14 @@ typedef void * lv_obj_user_data_t;
 #endif
 
 /*1: enable `lv_obj_realaign()` based on `lv_obj_align()` parameters*/
-#define LV_USE_OBJ_REALIGN          1
+#define LV_USE_OBJ_REALIGN          0
 
 /* Enable to make the object clickable on a larger area.
  * LV_EXT_CLICK_AREA_OFF or 0: Disable this feature
  * LV_EXT_CLICK_AREA_TINY: The extra area can be adjusted horizontally and vertically (0..255 px)
  * LV_EXT_CLICK_AREA_FULL: The extra area can be adjusted in all 4 directions (-32k..+32k px)
  */
-#define LV_USE_EXT_CLICK_AREA  LV_EXT_CLICK_AREA_TINY
+#define LV_USE_EXT_CLICK_AREA  0
 
 /*==================
  *  LV OBJ X USAGE

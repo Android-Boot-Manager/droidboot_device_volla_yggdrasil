@@ -46,7 +46,7 @@
 #include <storage_api.h>
 #include <error.h>
 #include <partition_error.h>
-
+#include <video.h>
 /* dummy parameter is for prameter alignment */
 ssize_t partition_read(const char *part_name, off_t offset, u8* data, size_t size)
 {
@@ -170,6 +170,7 @@ int32_t partition_erase(const char *part_name)
 #ifdef MTK_PARTITION_COMMON
 u64 emmc_write(u32 part_id, u64 offset, void *data, u64 size)
 {
+    video_printf ("partid %d, addr 0x%llx, size 0x%x\n", part_id, offset, size);
 	part_dev_t *dev = mt_part_get_device();
 
 	if (!dev) {

@@ -32,7 +32,7 @@
 #include "msdc_cfg.h" //Include msdc_cfg.h for defining MMC_MSDC_DRV_PRELOADER
 #include "msdc.h"
 #include "mmc_common_inter.h"
-
+#include <mmc_common_inter.h>
 #if defined(MMC_MSDC_DRV_LK)
 #include "block_generic_interface.h"
 #include "mt_gpt.h"
