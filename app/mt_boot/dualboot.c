@@ -202,18 +202,8 @@ static void event_handler(lv_obj_t * obj, lv_event_t event)
         }
         else
         {
-        boot_linux_ext2("/boot/db/ut", "/boot/db/utrd", "bootopt=64S3,32N2,64N2 androidboot.selinux=permissive");
-        part_dev_t *dev;
-        dev = mt_part_get_device();
-        video_printf("type %d \n",dev->blkdev->type);
-        int ret;
-      //  ret = fs_mount("/boot", "ext2", "hd1p1"); //system
-	  //  video_printf("fs_mount ret: %d\n", ret);
-        video_printf("bio_dump_devices \n");
-        bio_dump_devices();
-        video_printf("bio_dump_devices end");
+            boot_linux_ext2("/boot/db/ut", "/boot/db/utrd", "systempart=/dev/mmcblk1p1 datapart=/dev/mmcblk1p2 bootopt=64S3,32N2,64N2 androidboot.selinux=permissive");
         }
-        //}
     }
 }
 
@@ -278,17 +268,15 @@ void db_init()
     
     lv_obj_t * list_btn;
 
-    list_btn = lv_list_add_btn(list1, LV_SYMBOL_FILE, "main");
-    lv_obj_set_event_cb(list_btn, event_handler);
-
-    list_btn = lv_list_add_btn(list1,  LV_SYMBOL_FILE, "Extras");
+    list_btn = lv_list_add_btn(list1, LV_SYMBOL_FILE, entry_list->title);
     lv_obj_set_event_cb(list_btn, event_handler);
     int i;
-    for (i = 0; i < num_of_boot_entries; i++) {
+    for (i = 1; i < num_of_boot_entries; i++) {
         list_btn = lv_list_add_btn(list1,  LV_SYMBOL_FILE, (entry_list + i)->title);
         lv_obj_set_event_cb(list_btn, event_handler);
     }
-
-    //boot_test("/boot/db/ut", "/boot/db/utrd", "bootopt=64S3,32N2,64N2 androidboot.selinux=permissive");
+    list_btn = lv_list_add_btn(list1,  LV_SYMBOL_FILE, "Extras");
+    lv_obj_set_event_cb(list_btn, event_handler);
+    
 
 }
