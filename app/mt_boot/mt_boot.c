@@ -1504,7 +1504,6 @@ void get_AB_OTA_name(char *part_name, int size)
 
 
 int boot_linux_ext2(char *kernel_path, char *ramdisk_path, char *cmdline){
-
 	int ret = 0;
 	uint32_t kernel_target_addr = 0;
 	uint32_t ramdisk_target_addr = 0;

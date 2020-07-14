@@ -202,7 +202,13 @@ static void event_handler(lv_obj_t * obj, lv_event_t event)
         }
         else
         {
-            boot_linux_ext2("/boot/db/ut", "/boot/db/utrd", "systempart=/dev/mmcblk1p1 datapart=/dev/mmcblk1p2 bootopt=64S3,32N2,64N2 androidboot.selinux=permissive");
+            char *linux = malloc(strlen("/boot/") + strlen((entry_list + index)->linux) + 1);
+		    char *initrd = malloc(strlen("/boot/") + strlen((entry_list + index)->initrd) + 1);
+            strcpy(linux, "/boot/");
+		    strcat(linux, (entry_list + index)->linux);
+		    strcpy(initrd, "/boot/");
+		    strcat(initrd, (entry_list + index)->initrd);
+            boot_linux_ext2(linux, initrd, (entry_list + index)->options);
         }
     }
 }
