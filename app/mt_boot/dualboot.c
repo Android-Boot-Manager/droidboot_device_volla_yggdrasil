@@ -202,7 +202,7 @@ static void event_handler(lv_obj_t * obj, lv_event_t event)
         }
         else
         {
-        boot_test("/boot/db/ut", "/boot/db/utrd", "bootopt=64S3,32N2,64N2 androidboot.selinux=permissive");
+        boot_linux_ext2("/boot/db/ut", "/boot/db/utrd", "bootopt=64S3,32N2,64N2 androidboot.selinux=permissive");
         part_dev_t *dev;
         dev = mt_part_get_device();
         video_printf("type %d \n",dev->blkdev->type);

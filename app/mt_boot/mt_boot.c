@@ -335,51 +335,7 @@ extern unsigned int g_fb_base;
 extern unsigned int g_fb_size;
 unsigned int logo_lk_t = 0;
 bool boot_ftrace = false;
-void hexDump(char *desc, void *addr, int len) 
-{
-    int i;
-    unsigned char buff[17];
-    unsigned char *pc = (unsigned char*)addr;
 
-    // Output description if given.
-    if (desc != NULL)
-        video_printf ("%s:\n", desc);
-
-    // Process every byte in the data.
-    for (i = 0; i < len; i++) {
-        // Multiple of 16 means new line (with line offset).
-
-        if ((i % 16) == 0) {
-            // Just don't print ASCII for the zeroth line.
-            if (i != 0)
-                video_printf("  %s\n", buff);
-
-            // Output the offset.
-            video_printf("  %04x ", i);
-        }
-
-        // Now the hex code for the specific character.
-        video_printf(" %02x", pc[i]);
-
-        // And store a printable ASCII character for later.
-        if ((pc[i] < 0x20) || (pc[i] > 0x7e)) {
-            buff[i % 16] = '.';
-        } else {
-            buff[i % 16] = pc[i];
-        }
-
-        buff[(i % 16) + 1] = '\0';
-    }
-
-    // Pad out last line if not exactly 16 characters.
-    while ((i % 16) != 0) {
-        video_printf("   ");
-        i++;
-    }
-
-    // And print the final ASCII bit.
-    video_printf("  %s\n", buff);
-}
 static void mboot_free_lk_scratch_from_mblock()
 {
 #ifdef ALLOCATE_FROM_MBLOCK
@@ -662,8 +618,6 @@ int boot_linux_fdt(void *kernel, unsigned *tags,
 		   unsigned machtype,
 		   void *ramdisk, unsigned ramdisk_sz, unsigned zimage_s, unsigned zimage_ad)
 {
-    video_printf("booting linux 1 @ %p, ramdisk @ %p (%d)\n",
-		kernel, ramdisk, ramdisk_sz);
 	void *fdt = tags;
 	int ret;
 	int offset;
@@ -691,7 +645,6 @@ int boot_linux_fdt(void *kernel, unsigned *tags,
 	u32 seed[2];
 	const void *seedp;
 	int seed_len;
-
 	if (g_is_64bit_kernel) {
 		uint32_t kernel_target_addr = 0;
         if(zimage_ad ==NULL){
@@ -710,22 +663,15 @@ int boot_linux_fdt(void *kernel, unsigned *tags,
         }
 		kernel_target_addr = get_kernel_target_addr();
 
-		video_printf("64 bits kernel\n");
-		video_printf("kernel_sz=0x%08x\n", zimage_size);
+
 
 		if (kernel_target_addr & 0x7FFFF) {
-			video_printf("64 bit kernel can't boot at 0x%08x\n",
-					kernel_target_addr);
 			while (1);
 		}
 
 		dtb_size = (g_64bit_dtb_size + 0x3) & (~0x3);
 		dtb_addr = (unsigned int)fdt;
 		//zimage_size -= dtb_size;
-
-		video_printf("zimage_addr=0x%08x, zimage_size=0x%08x\n",
-				zimage_addr, zimage_size);
-		video_printf("decompress kernel image...\n");
 
 		/* for 64bit decompreesed size.
 		 * LK start: 0x41E00000, Kernel Start: 0x40080000
@@ -737,11 +683,7 @@ int boot_linux_fdt(void *kernel, unsigned *tags,
 		if (decompress_kernel((unsigned char *)zimage_addr,
 				      (void *)kernel_target_addr, (int)zimage_size,
 				      (int)decompress_outbuf_size)) {
-			video_printf("decompress kernel image fail!!!\n");
-			//memmove(kernel_target_addr, zimage_addr, zimage_size);
 		}
-    video_printf("kernel ok");
-    hexDump("Linux", kernel_target_addr, 512);
 	} else {
 		pal_log_info("32 bits kernel\n");
 		zimage_size = *(uint32_t *)((uint32_t)kernel + 0x2c) - *
@@ -955,15 +897,12 @@ int boot_linux_fdt(void *kernel, unsigned *tags,
 	offset = fdt_path_offset(fdt, "/chosen");
 	ret = fdt_setprop_cell(fdt, offset, "linux,initrd-start",
 			       (unsigned int) get_ramdisk_target_addr());
-    hexDump("rdtargetboot", get_ramdisk_target_addr(), 512);
 	if (ret) {
 		assert(0);
 		return FALSE;
 	}
 	ret = fdt_setprop_cell(fdt, offset, "linux,initrd-end",
 			       (unsigned int)get_ramdisk_addr() + ramdisk_sz);
-video_printf("booting linux 2@ %p, ramdisk @ %p (%d)\n",
-		kernel, ramdisk, ramdisk_sz);
 	if (ret) {
 		assert(0);
 		return FALSE;
@@ -1431,8 +1370,6 @@ video_printf("booting linux 2@ %p, ramdisk @ %p (%d)\n",
 		return FALSE;
 	}
 
-	video_printf("booting linux 3 @ %p, ramdisk @ %p (%d)\n",
-		kernel, ramdisk, ramdisk_sz);
 
 	if (strncmp(checker, FDT_BUFF_END, FDT_CHECKER_SIZE) != 0) {
 		pal_log_err("ERROR: fdt buff overflow\n");
@@ -1566,7 +1503,7 @@ void get_AB_OTA_name(char *part_name, int size)
 #endif /* MTK_AB_OTA_UPDATER */
 
 
-int boot_test(char *kernel_path, char *ramdisk_path, char *cmdline){
+int boot_linux_ext2(char *kernel_path, char *ramdisk_path, char *cmdline){
 
 	int ret = 0;
 	uint32_t kernel_target_addr = 0;
@@ -1632,6 +1569,7 @@ int boot_test(char *kernel_path, char *ramdisk_path, char *cmdline){
 		break;
 
 	}
+    cmdline_append(cmdline);
     kernel_target_addr = get_kernel_target_addr();
 	ramdisk_target_addr = get_ramdisk_target_addr();
 	ramdisk_addr = get_ramdisk_addr();
@@ -1669,8 +1607,6 @@ int boot_test(char *kernel_path, char *ramdisk_path, char *cmdline){
 	
 	memcpy(kernel_target_addr, kernel_raw, kernel_raw_size);
     memcpy(target_get_scratch_address(), kernel_raw, kernel_raw_size);
-    //hexDump("Linux", kernel_target_addr, 512);
-    //hexDump("Linux", target_get_scratch_address(), 512);
 	kernel_raw = NULL; //get rid of dangerous reference to ramdisk_addr before it can do harm
 
 	ramdisk_size = fs_get_file_size(ramdisk_path);
@@ -1688,18 +1624,16 @@ int boot_test(char *kernel_path, char *ramdisk_path, char *cmdline){
     
     memcpy(ramdisk_target_addr, ramdisk_addr, ramdisk_size);
     memcpy(kernel_target_addr+kernel_raw_size, ramdisk_addr, ramdisk_size);
-    hexDump("rd", ramdisk_addr, 512);
-    hexDump("rdtarget", ramdisk_target_addr, 512);
 
 	fs_unmount("/boot");
 
-    video_printf("Booting linux kerneladdr: %d, tags_addr: %d, ramdisk add: %d, ramdisk size: %d \n", kernel_addr,  tags_addr, ramdisk_addr, ramdisk_size);
+   
     	boot_linux_fdt((void *)kernel_addr,
 			(unsigned *)tags_addr,
 		   	board_machtype(),
 			(void *)ramdisk_target_addr,
 			ramdisk_real_sz, kernel_raw_size, kernel_addr);
-    video_printf("failed \n");
+
 
 	return -1; //something went wrong*/
 }
