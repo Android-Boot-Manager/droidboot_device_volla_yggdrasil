@@ -20,12 +20,16 @@
 #include <lib/partition.h>
 #include "config.h"
 
+
 #define MMC_HOST_ID                 0
 typedef unsigned int        u32;
 int num_of_boot_entries;
-
+void draw_menu_extras();
 struct boot_entry *entry_list;
 bool booting=false;
+lv_obj_t *menu = NULL;
+lv_obj_t *extras = NULL;
+lv_obj_t *about = NULL;
 typedef struct mmc_sdhci_bdev {
   	bdev_t dev; // base device
   
@@ -105,9 +109,15 @@ void my_disp_flush(lv_disp_t * disp,
 static void event_handler(lv_obj_t * obj, lv_event_t event)
 {
     if(event == LV_EVENT_CLICKED) {
+        video_printf("um_of_boot_entries: %d \n",num_of_boot_entries);
         int index = lv_list_get_btn_index(NULL, obj);
         if(index==0){
             boot_linux_from_storage();
+            return;
+        }
+        if(index==num_of_boot_entries)
+        {
+        draw_menu_extras();
         }
         else
         {
@@ -147,25 +157,59 @@ bool key_read(lv_indev_drv_t * drv, lv_indev_data_t*data)
    
 }
 
-void db_init()
+void screen_about()
 {
-    cache_init();
-    parse_boot_entries(&entry_list);
-    num_of_boot_entries = get_entry_count();
-    thread_t *thr;
-    video_clean_screen();
-    lv_init();
-    thr=thread_create("sleeper", & sleep_thread, NULL, HIGHEST_PRIORITY, 16*1024);
-    thread_resume(thr);
-    static lv_disp_buf_t disp_buf;
-    static lv_color_t buf[LV_HOR_RES_MAX * 10]; /*Declare a buffer for 10 lines*/
-    lv_disp_buf_init( & disp_buf, buf, NULL, LV_HOR_RES_MAX * 10); /*Initialize the display buffer*/
-    lv_disp_drv_t disp_drv; /*Descriptor of a display driver*/
-    lv_disp_drv_init( & disp_drv); /*Basic initialization*/
-    disp_drv.flush_cb = my_disp_flush; /*Set your driver function*/
-    disp_drv.buffer = & disp_buf; /*Assign the buffer to the display*/
-    lv_disp_drv_register( & disp_drv); /*Finally register the driver*/
+    about = lv_obj_create(NULL, NULL);
+    lv_scr_load(about);
+    lv_obj_del(extras);
+    lv_obj_t * win = lv_win_create(lv_scr_act(), NULL);
+    lv_win_set_title(win, "About"); 
+}
+static void about_handler(lv_obj_t * obj, lv_event_t event)
+{
+    if(event == LV_EVENT_CLICKED) {
+        int index = lv_list_get_btn_index(NULL, obj);
+        if(index==0)
+        {   
+            screen_about();
+        }
+    }
+}
+void draw_menu_extras()
+{
+    extras = lv_obj_create(NULL, NULL);
+    lv_scr_load(extras);
+    lv_obj_del(menu);
+    lv_obj_t * win = lv_win_create(lv_scr_act(), NULL);
+    lv_win_set_title(win, "Extras"); 
 
+    lv_obj_t * list2 = lv_list_create(win, NULL);
+    lv_group_t * g2 = lv_group_create();
+    lv_group_add_obj(g2, list2);
+    lv_group_focus_obj(list2);
+    lv_obj_set_size(list2, 1000, 2100);
+    lv_obj_align(list2, NULL, LV_ALIGN_IN_TOP_MID, 0, 0);
+    lv_list_set_anim_time(list2, 0);
+
+    lv_indev_drv_t indev_drv;
+    lv_indev_drv_init(&indev_drv);      /*Basic initialization*/
+    indev_drv.type = LV_INDEV_TYPE_KEYPAD;
+    indev_drv.read_cb = key_read;
+    /*Register the driver in LVGL and save the created input device object*/
+    lv_indev_t * my_indev = lv_indev_drv_register(&indev_drv);
+    lv_indev_set_group(my_indev, g2);
+    
+    lv_obj_t * list_btn;
+
+
+    list_btn = lv_list_add_btn(list2,  LV_SYMBOL_FILE, "About ABM");
+    lv_obj_set_event_cb(list_btn, about_handler);
+}
+
+void create_menu()
+{
+    menu = lv_obj_create(NULL, NULL);
+    lv_scr_load(menu);
     lv_obj_t * win = lv_win_create(lv_scr_act(), NULL);
     lv_win_set_title(win, "Boot menu"); 
 
@@ -196,6 +240,41 @@ void db_init()
     }
     list_btn = lv_list_add_btn(list1,  LV_SYMBOL_FILE, "Extras");
     lv_obj_set_event_cb(list_btn, event_handler);
+}
+void db_init()
+{
+    //Init blockdevice
+    cache_init();
+
+    //Parse config
+    parse_boot_entries(&entry_list);
+
+    //Get number of entrys from storage
+    num_of_boot_entries = get_entry_count();
+    
+    //Clear screen
+    video_clean_screen();
+    
+    //Init LVGL
+    lv_init();
+
+    //Create thread for LVGL
+    thread_t *thr;
+    thr=thread_create("sleeper", & sleep_thread, NULL, HIGHEST_PRIORITY, 16*1024);
+    thread_resume(thr);
+
+    //Init display and display buffer for LVGL
+    static lv_disp_buf_t disp_buf;
+    static lv_color_t buf[LV_HOR_RES_MAX * 10]; /*Declare a buffer for 10 lines*/
+    lv_disp_buf_init( & disp_buf, buf, NULL, LV_HOR_RES_MAX * 10); /*Initialize the display buffer*/
+    lv_disp_drv_t disp_drv; /*Descriptor of a display driver*/
+    lv_disp_drv_init( & disp_drv); /*Basic initialization*/
+    disp_drv.flush_cb = my_disp_flush; /*Set your driver function*/
+    disp_drv.buffer = & disp_buf; /*Assign the buffer to the display*/
+    lv_disp_drv_register( & disp_drv); /*Finally register the driver*/
+
+    //Draw menu
+    create_menu();
     
 
 }
