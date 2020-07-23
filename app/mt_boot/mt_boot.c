@@ -616,7 +616,7 @@ int mboot_common_get_hall_calidata(char *buf)
 
 int boot_linux_fdt(void *kernel, unsigned *tags,
 		   unsigned machtype,
-		   void *ramdisk, unsigned ramdisk_sz, unsigned zimage_s, unsigned zimage_ad)
+		   void *ramdisk, unsigned ramdisk_sz, unsigned zimage_s, unsigned zimage_ad, unsigned dtb_addr1, unsigned dtb_size1)
 {
 	void *fdt = tags;
 	int ret;
@@ -762,7 +762,11 @@ int boot_linux_fdt(void *kernel, unsigned *tags,
 		}
 #endif
 #endif
-
+    if(dtb_addr1 != NULL){
+        memcpy(fdt, (void *)dtb_addr1, dtb_size1);
+        ret = setup_fdt(fdt,
+			dtb_size1);
+}
 	extern int setup_mem_property_use_mblock_info(dt_dram_info *,
 			size_t) __attribute__((weak));
 	if (setup_mem_property_use_mblock_info) {
@@ -1479,7 +1483,7 @@ void boot_linux(void *kernel, unsigned *tags,
 #ifdef DEVICE_TREE_SUPPORT
 	boot_linux_fdt((void *)kernel, (unsigned *)tags,
 		       machtype,
-		       (void *)ramdisk, ramdisk_sz, NULL, NULL);
+		       (void *)ramdisk, ramdisk_sz, NULL, NULL, NULL, NULL);
 
 	while (1) ;
 #endif
@@ -1503,7 +1507,7 @@ void get_AB_OTA_name(char *part_name, int size)
 #endif /* MTK_AB_OTA_UPDATER */
 
 
-int boot_linux_ext2(char *kernel_path, char *ramdisk_path, char *cmdline){
+int boot_linux_ext2(char *kernel_path, char *ramdisk_path, char *cmdline, char *dtb_path){
 	int ret = 0;
 	uint32_t kernel_target_addr = 0;
 	uint32_t ramdisk_target_addr = 0;
@@ -1623,7 +1627,13 @@ int boot_linux_ext2(char *kernel_path, char *ramdisk_path, char *cmdline){
     
     memcpy(ramdisk_target_addr, ramdisk_addr, ramdisk_size);
     memcpy(kernel_target_addr+kernel_raw_size, ramdisk_addr, ramdisk_size);
-
+    
+    dtb_size = fs_get_file_size(dtb_path);
+    if(fs_load_file(dtb_path, kernel_target_addr+kernel_raw_size, dtb_size) < 0) {
+		printf("failed loading dtb %p\n", tags_addr);
+		fs_unmount("/boot");
+		return -1;
+	}
 	fs_unmount("/boot");
 
    
@@ -1631,7 +1641,7 @@ int boot_linux_ext2(char *kernel_path, char *ramdisk_path, char *cmdline){
 			(unsigned *)tags_addr,
 		   	board_machtype(),
 			(void *)ramdisk_target_addr,
-			ramdisk_real_sz, kernel_raw_size, kernel_addr);
+			ramdisk_real_sz, kernel_raw_size, kernel_addr, kernel_target_addr+kernel_raw_size, dtb_size);
 
 
 	return -1; //something went wrong*/
