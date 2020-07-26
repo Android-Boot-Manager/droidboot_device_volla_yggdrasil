@@ -12,13 +12,15 @@ Dualbooting is useful
 
 * to try out an alternative operating system (without overwriting the existing installation)
 * boot from a secure external storage (SD card) for special security like
-  ensuring an untampered operating system, prevent persistent viruses and tracking software
+  * ensuring an untampered operating system
+  * prevent persistent viruses and tracking software
 
 ## About Volla phone
 
 The [Volla Phone](https://volla.online/de/) (code name `yggdrasil`) is a privacy-focused mobile device which supports
 different operating systems (customized Android, [Ubuntu Touch](https://ubuntu-touch.io/) and [SailfishOS](https://sailfishos.org/))
-and was successfully sponsored by a [kickstarter campaign in 2020](https://www.kickstarter.com/projects/volla/volla-phone-designed-with-simplicity-and-security-in-mind).
+
+It was successfully sponsored by a [kickstarter campaign in 2020](https://www.kickstarter.com/projects/volla/volla-phone-designed-with-simplicity-and-security-in-mind).
 
 The phone hardware is “Made in Germany” from the experienced hardware partner [Gigaset](https://www.gigaset.com/hq_en/).
 
@@ -36,18 +38,15 @@ For compilation you will need google's `gcc4.9` toolchain.
 
 You can get it from: https://android.googlesource.com/platform/prebuilts/gcc/linux-x86/arm/arm-linux-androideabi-4.9
 
-As google deprecated `gcc` you will need to switch to the last commit before deprecation with this shell command
+As google deprecated `gcc` you will need to switch to the last commit before deprecation with this shell command from within the toolchain directory:
 
 `git checkout 16dab5225bf4c95baae3733f05b6e4b0e1c9aae9`
 
-from within the toolchain directory.
-Open a terminal (shell) and navigate to the `droidboot` directory with cd.
-Then build via
+To build the bootloader image file open a terminal (shell) and navigate to the `droidboot` directory with `cd`, then enter:
 
 `make TOOLCHAIN_PREFIX=~/toolchain/bin/arm-linux-androideabi- k63v2_64_bsp`
 
 The bootloader is then contained in the file `build-k63v2_64_bsp/lk.img`
-
 
 ## Installation
 
@@ -59,6 +58,10 @@ On a phone with an unlocked bootloader you can flash the bootloader with the `fa
 ## Configuration of boot targets
 
 **TODO: How does the config file looks like? Which steps are required to add a new operating system?**
+
+## Using the bootloader
+
+**TODO: Describe the steps to boot into bootloader**
 
 ## Disclaimer
 
