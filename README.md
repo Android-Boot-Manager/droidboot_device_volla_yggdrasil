@@ -51,7 +51,8 @@ The bootloader is then contained in the file `build-k63v2_64_bsp/lk.img`
 
 ## Installation
 
-On a phone with an unlocked bootloader you can flash the bootloader with
+On a phone with an unlocked bootloader you can flash the bootloader with the `fastboot` command
+(which can be installed eg. on Ubuntu Linux with `fastboot` package):
 
 `fastboot flash lk lk.img`
 
