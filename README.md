@@ -8,6 +8,7 @@ from the internal device storage or an inserted (fast) SD card.
 
 -------
 Be sure to check out our [wiki](https://github.com/Android-Boot-Manager/App/wiki)
+
 -------
 
 ## About Volla phone
