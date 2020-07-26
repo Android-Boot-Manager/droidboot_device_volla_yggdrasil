@@ -6,15 +6,6 @@ from the internal device storage or an inserted (fast) SD card.
 
 **Current status: Pre-alpha (only for development, not for end-users)**
 
-## Use Cases
-
-Dualbooting is useful
-
-* to try out an alternative operating system (without overwriting the existing installation)
-* boot from a secure external storage (SD card) for special security like
-  * ensuring an untampered operating system
-  * prevent persistent viruses and tracking software
-
 ## About Volla phone
 
 The [Volla Phone](https://volla.online/de/) (code name `yggdrasil`) is a privacy-focused mobile device which supports
