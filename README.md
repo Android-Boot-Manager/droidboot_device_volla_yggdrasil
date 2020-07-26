@@ -48,20 +48,9 @@ To build the bootloader image file open a terminal (shell) and navigate to the `
 
 The bootloader is then contained in the file `build-k63v2_64_bsp/lk.img`
 
-## Installation
+## Install and use the boot manager
 
-On a phone with an unlocked bootloader you can flash the bootloader with the `fastboot` command
-(which can be installed eg. on Ubuntu Linux with `fastboot` package):
-
-`fastboot flash lk lk.img`
-
-## Configuration of boot targets
-
-**TODO: How does the config file looks like? Which steps are required to add a new operating system?**
-
-## Using the bootloader
-
-**TODO: Describe the steps to boot into bootloader**
+Install and use the [Android Boot Manager App](https://github.com/Android-Boot-Manager/App) (requires unlocked bootloader)
 
 ## Disclaimer
 
