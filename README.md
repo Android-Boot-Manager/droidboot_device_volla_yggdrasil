@@ -6,6 +6,10 @@ from the internal device storage or an inserted (fast) SD card.
 
 **Current status: Pre-alpha (only for development, not for end-users)**
 
+-------
+Be sure to check out our [wiki](https://github.com/Android-Boot-Manager/App/wiki)
+-------
+
 ## About Volla phone
 
 The [Volla Phone](https://volla.online/de/) (code name `yggdrasil`) is a privacy-focused mobile device which supports
