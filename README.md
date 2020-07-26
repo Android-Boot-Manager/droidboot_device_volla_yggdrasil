@@ -7,7 +7,7 @@ from the internal device storage or an inserted (fast) SD card.
 **Current status: Pre-alpha (only for development, not for end-users)**
 
 -------
-Be sure to check out our [wiki](https://github.com/Android-Boot-Manager/App/wiki)
+Be sure to check out our [wiki](https://github.com/Android-Boot-Manager/App/wiki)!
 
 -------
 
