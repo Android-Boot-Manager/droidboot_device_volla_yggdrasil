@@ -1,4 +1,4 @@
-# Android boot manager for Volla phone (droidboot_device_volla_yggdrasil)
+# Android Boot Manager for Volla Phone (droidboot_device_volla_yggdrasil)
 
 This repo contains a [lk](https://github.com/littlekernel)-based bootlader for the [Volla Phone](https://volla.online/de/)
 to support dualbooting (booting of different operating systems on the same mobile device)
