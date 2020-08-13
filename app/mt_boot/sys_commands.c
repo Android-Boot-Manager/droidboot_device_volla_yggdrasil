@@ -43,7 +43,7 @@
 
 #include <target.h>
 #include <platform.h>
-
+#define BOOT_ARGS_SIZE 512
 #include <platform/mt_reg_base.h>
 #include <platform/boot_mode.h>
 #include <platform/mtk_wdt.h>
@@ -60,7 +60,37 @@
 #include "fastboot.h"
 #include "sys_commands.h"
 #include <mt_scp_if.h>
+#define BOOT_MAGIC "ANDROID!"
+#define BOOT_MAGIC_SIZE 8
+#define BOOT_NAME_SIZE 16
+#define BOOT_ARGS_SIZE 512
 
+struct boot_img_hdr
+{
+    unsigned char magic[BOOT_MAGIC_SIZE];
+
+    unsigned kernel_size;  /* size in bytes */
+    unsigned kernel_addr;  /* physical load addr */
+
+    unsigned ramdisk_size; /* size in bytes */
+    unsigned ramdisk_addr; /* physical load addr */
+
+    unsigned second_size;  /* size in bytes */
+    unsigned second_addr;  /* physical load addr */
+
+    unsigned tags_addr;    /* physical addr for kernel tags */
+    unsigned page_size;    /* flash page size we assume */
+    unsigned unused[2];    /* future expansion: should be 0 */
+
+    unsigned char name[BOOT_NAME_SIZE]; /* asciiz product name */
+    
+    unsigned char cmdline[BOOT_ARGS_SIZE];
+
+    unsigned id[8]; /* timestamp / checksum / sha1 / etc */
+};
+
+static unsigned int page_size = 0;
+static unsigned int page_mask = 0;
 
 /*** FIXME!!! #include <disp_drv.h>           // for DISP_IsLcmFound(), DISP_GetVRamSize() ***/
 BOOL DISP_IsLcmFound(void);
@@ -457,173 +487,48 @@ extern unsigned int g_kmem_off;
 extern unsigned int g_rmem_off;
 extern unsigned int g_bimg_sz;
 #define ROUND_TO_PAGE(x,y) (((x) + (y)) & (~(y)))
+void cmd_bootkernel(const char *arg, void *data, unsigned sz){
+fastboot_okay("Hi");
+}
 void cmd_boot(const char *arg, void *data, unsigned sz)
 {
 	unsigned kernel_actual;
 	unsigned ramdisk_actual;
-	struct bootimg_hdr *boot_hdr;
-	char *ptr = ((char *) data);
-	unsigned page_sz = 0;
-	unsigned page_mask = 0;
-#define CMDLINE_TMP_CONCAT_SIZE 100     //only for string concat, 100 bytes is enough
-	char cmdline_tmpbuf[CMDLINE_TMP_CONCAT_SIZE];
+	static struct boot_img_hdr hdr;
+	char *ptr = ((char*) data);
 
-	boot_hdr = (struct bootimg_hdr *)malloc(sizeof(struct bootimg_hdr));
-
-	if (!boot_hdr) {
-		dprintf(CRITICAL, "cmd_boot,boot_hdr = NULL\n");
+	if (sz < sizeof(hdr)) {
+		fastboot_fail("invalid bootimage header");
 		return;
 	}
 
-	memcpy(boot_hdr, data, sizeof(struct bootimg_hdr));
-
-	dprintf(INFO,
-		"\n============================================================\n");
-	boot_hdr->magic[7] = '\0';
-	dprintf(INFO, "[%s] Android Boot IMG Hdr - Magic 	        : %s\n", MODULE_NAME,
-		boot_hdr->magic);
-	dprintf(INFO, "[%s] Android Boot IMG Hdr - Kernel Size 	: 0x%x\n", MODULE_NAME,
-		boot_hdr->kernel_sz);
-	dprintf(INFO, "[%s] Android Boot IMG Hdr - Kernel addr 	: 0x%x\n", MODULE_NAME,
-		boot_hdr->kernel_addr);
-	dprintf(INFO, "[%s] Android Boot IMG Hdr - Rootfs Size 	: 0x%x\n", MODULE_NAME,
-		boot_hdr->ramdisk_sz);
-	dprintf(INFO, "[%s] Android Boot IMG Hdr - Page Size    	: 0x%x\n", MODULE_NAME,
-		boot_hdr->page_sz);
-	dprintf(INFO, "============================================================\n");
+	memcpy(&hdr, data, sizeof(hdr));
 
 	/* ensure commandline is terminated */
-	boot_hdr->cmdline[BOOTIMG_ARGS_SZ - 1] = 0;
+	hdr.cmdline[BOOT_ARGS_SIZE-1] = 0;
 
-	if (boot_hdr->page_sz) {
-		page_sz = boot_hdr->page_sz;
-		page_mask = page_sz - 1;
-		//page_mask = 2*1024 ; /*FIXME*/
-	} else {
-		dprintf(CRITICAL,
-			"[FASTBOOT] Please specify the storage page-size in the boot header!\n");
-		fastboot_fail("Please specify the storage page-size in the boot header!\n");
-		goto _cmd_boot_exit;
+	if(target_is_emmc_boot() && hdr.page_size) {
+		page_size = hdr.page_size;
+		page_mask = page_size - 1;
 	}
 
-	kernel_actual = ROUND_TO_PAGE(boot_hdr->kernel_sz, page_mask);
-	ramdisk_actual = ROUND_TO_PAGE(boot_hdr->ramdisk_sz, page_mask);
+	kernel_actual = ROUND_TO_PAGE(hdr.kernel_size, page_mask);
+	ramdisk_actual = ROUND_TO_PAGE(hdr.ramdisk_size, page_mask);
 
 	/* sz should have atleast raw boot image */
-	if (page_sz + kernel_actual + ramdisk_actual > sz) {
+	if (page_size + kernel_actual + ramdisk_actual > sz) {
 		fastboot_fail("incomplete bootimage");
-		goto _cmd_boot_exit;
+		return;
 	}
 
-	if ((boot_hdr->kernel_addr <= ROUND_TO_PAGE((boot_hdr->ramdisk_addr +
-			boot_hdr->ramdisk_sz), page_mask)) &&
-	    (ROUND_TO_PAGE((boot_hdr->kernel_addr + boot_hdr->kernel_sz),
-			   page_mask) >= boot_hdr->ramdisk_addr)) {
-		fastboot_fail("invalid kernel & ramdisk address: images overlap");
-		goto _cmd_boot_exit;
-	}
-
-	if ((boot_hdr->kernel_addr < DRAM_PHY_ADDR) ||
-	    (ROUND_TO_PAGE((boot_hdr->kernel_addr + boot_hdr->kernel_sz),
-			   page_mask) > (DRAM_PHY_ADDR + (u64)memory_size()))) {
-		fastboot_fail("invalid kernel address: not lie in memory");
-		goto _cmd_boot_exit;
-	}
-
-	if ((boot_hdr->kernel_addr <= _heap_end) &&
-	    (ROUND_TO_PAGE((boot_hdr->kernel_addr + boot_hdr->kernel_sz),
-			   page_mask) >= MEMBASE)) {
-		fastboot_fail("invalid kernel address: overlap with lk");
-		goto _cmd_boot_exit;
-	}
-
-	if ((boot_hdr->kernel_addr <= ROUND_TO_PAGE((SCRATCH_ADDR + boot_hdr->kernel_sz
-			+ boot_hdr->ramdisk_sz), page_mask)) &&
-	    (ROUND_TO_PAGE((boot_hdr->kernel_addr + boot_hdr->kernel_sz),
-			   page_mask) >= SCRATCH_ADDR)) {
-		fastboot_fail("invalid kernel address: overlap with the download image");
-		goto _cmd_boot_exit;
-	}
-
-	if ((boot_hdr->ramdisk_addr < DRAM_PHY_ADDR) ||
-	    (ROUND_TO_PAGE((boot_hdr->ramdisk_addr + boot_hdr->ramdisk_sz),
-			   page_mask) > (DRAM_PHY_ADDR + (u64)memory_size()))) {
-		fastboot_fail("invalid ramdisk address: not lie in memory");
-		goto _cmd_boot_exit;
-	}
-
-	if ((boot_hdr->ramdisk_addr <= _heap_end) &&
-	    (ROUND_TO_PAGE((boot_hdr->ramdisk_addr + boot_hdr->ramdisk_sz),
-			   page_mask) >= MEMBASE)) {
-		fastboot_fail("invalid ramdisk address: overlap with lk");
-		goto _cmd_boot_exit;
-	}
-
-	if ((boot_hdr->ramdisk_addr <= ROUND_TO_PAGE((SCRATCH_ADDR + boot_hdr->kernel_sz
-			+ boot_hdr->ramdisk_sz), page_mask)) &&
-	    (ROUND_TO_PAGE((boot_hdr->ramdisk_addr + boot_hdr->ramdisk_sz),
-			   page_mask) >= SCRATCH_ADDR)) {
-		fastboot_fail("invalid ramdisk address: overlap with the download image");
-		goto _cmd_boot_exit;
-	}
-
-	if (g_is_64bit_kernel)
-		memmove((void *)SCRATCH_ADDR, (ptr + boot_hdr->page_sz), boot_hdr->kernel_sz);
-
-	else
-		memmove((void *)boot_hdr->kernel_addr, (ptr + boot_hdr->page_sz),
-			boot_hdr->kernel_sz);
-
-#ifdef MTK_3LEVEL_PAGETABLE
-	/* rootfs addr */
-	arch_mmu_map((uint64_t)boot_hdr->ramdisk_addr, (uint32_t)boot_hdr->ramdisk_addr,
-		     MMU_MEMORY_TYPE_NORMAL_WRITE_BACK | MMU_MEMORY_AP_P_RW_U_NA,
-		     ROUNDUP(boot_hdr->ramdisk_sz, PAGE_SIZE));
-#endif
-	memmove((void *) boot_hdr->ramdisk_addr,
-		(ptr + boot_hdr->page_sz + kernel_actual), boot_hdr->ramdisk_sz);
-
-#ifndef MACH_FPGA
-	cmdline_append((char *)boot_hdr->cmdline);
-	snprintf(cmdline_tmpbuf, CMDLINE_TMP_CONCAT_SIZE, "lcm=%1d-%s",
-		 DISP_IsLcmFound(), mt_disp_get_lcm_id());
-	cmdline_append(cmdline_tmpbuf);
-	snprintf(cmdline_tmpbuf, CMDLINE_TMP_CONCAT_SIZE, "fps=%1d",
-		 mt_disp_get_lcd_time());
-	cmdline_append(cmdline_tmpbuf);
-	snprintf(cmdline_tmpbuf, CMDLINE_TMP_CONCAT_SIZE, "vram=%1d",
-		 DISP_GetVRamSize());
-	cmdline_append(cmdline_tmpbuf);
-#endif
-
-#ifdef SELINUX_STATUS
-#if SELINUX_STATUS == 1
-	cmdline_append("androidboot.selinux=disabled");
-#elif SELINUX_STATUS == 2
-	cmdline_append("androidboot.selinux=permissive");
-#endif
-#endif
+	memmove((void*) hdr.kernel_addr, ptr + page_size, hdr.kernel_size);
+	memmove((void*) hdr.ramdisk_addr, ptr + page_size + kernel_actual, hdr.ramdisk_size);
 
 	fastboot_okay("");
 	udc_stop();
-	//mtk_wdt_init(); //re-open wdt
-	timer_cancel(&wdt_timer);
-	mtk_wdt_restart();
 
-	g_boot_mode = NORMAL_BOOT;
-	custom_port_in_kernel(g_boot_mode, cmdline_get());
-	dprintf(CRITICAL, "Kernel Address: 0x%8X\n", boot_hdr->kernel_addr);
-	dprintf(CRITICAL, "Ramdisk Address: 0x%8X\n", boot_hdr->ramdisk_addr);
-	dprintf(CRITICAL, "Atag Address: 0x%8X\n", boot_hdr->tags_addr);
-	dprintf(CRITICAL, "Command: %s\n", boot_hdr->cmdline);
-
-	boot_linux((void *) boot_hdr->kernel_addr, (void *) boot_hdr->tags_addr,
-		   (char *) cmdline_get(), board_machtype(),
-		   (void *) boot_hdr->ramdisk_addr, boot_hdr->ramdisk_sz);
-_cmd_boot_exit:
-	free(boot_hdr);
-	return;
-
+	boot_linux_ram((void*) hdr.kernel_addr, (void*) hdr.tags_addr,
+		   (const char*) hdr.cmdline, (void*) hdr.ramdisk_addr, hdr.ramdisk_size, hdr.kernel_size);
 }
 
 

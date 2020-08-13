@@ -115,6 +115,7 @@
 extern u32 current_lk_buf_addr_get(void) __attribute__((weak));
 extern u32 current_buf_addr_get(void) __attribute__((weak));
 extern u32 current_buf_pl_lk_log_size_get(void) __attribute__((weak));
+
 enum {
 	RUNTIME_LOG_DEACTIVATED = 0,
 	RUNTIME_LOG_ACTIVATED
@@ -280,7 +281,163 @@ static BUILD_TYPE_T eBuildType = BUILD_TYPE_ENG;
 #else
 static BUILD_TYPE_T eBuildType = BUILD_TYPE_USER;
 #endif
+int boot_linux_from_storage(void)
+{
+	int ret = 0;
+	uint32_t kernel_target_addr = 0;
+	uint32_t ramdisk_target_addr = 0;
+	uint32_t tags_target_addr = 0;
+	uint32_t ramdisk_addr = 0;
+	uint32_t ramdisk_real_sz = 0;
 
+#define CMDLINE_TMP_CONCAT_SIZE 110
+	char cmdline_tmpbuf[CMDLINE_TMP_CONCAT_SIZE];
+	switch (g_boot_mode) {
+	case NORMAL_BOOT:
+	case META_BOOT:
+	case ADVMETA_BOOT:
+	case SW_REBOOT:
+	case ALARM_BOOT:
+#ifdef MTK_KERNEL_POWER_OFF_CHARGING
+	case KERNEL_POWER_OFF_CHARGING_BOOT:
+	case LOW_POWER_OFF_CHARGING_BOOT:
+#endif
+		PROFILING_START("load boot image");
+#if defined(CFG_NAND_BOOT)
+		snprintf(cmdline_tmpbuf, CMDLINE_TMP_CONCAT_SIZE, "%s%x%s%x",
+			 NAND_MANF_CMDLINE, nand_flash_man_code, NAND_DEV_CMDLINE, nand_flash_dev_id);
+		cmdline_append(cmdline_tmpbuf);
+#endif
+		ret = load_vfy_boot(BOOTIMG_TYPE_BOOT, CFG_BOOTIMG_LOAD_ADDR);
+		PAL_ASSERT(ret >= 0);
+
+		PROFILING_END();
+		break;
+
+	case RECOVERY_BOOT:
+		/* it's boot.img when system as root is enabled, and is *
+		 * recovery.img when system as root is disabled. *
+		 */
+		PROFILING_START("load recovery image");
+
+		ret = load_vfy_boot(BOOTIMG_TYPE_RECOVERY, CFG_BOOTIMG_LOAD_ADDR);
+		PAL_ASSERT(ret >= 0);
+
+		PROFILING_END();
+		break;
+
+	case FACTORY_BOOT:
+	case ATE_FACTORY_BOOT:
+		/* it's boot.img, we don't have standalone factory image now */
+		PROFILING_START("load factory image");
+#if defined(CFG_NAND_BOOT)
+		snprintf(cmdline_tmpbuf, CMDLINE_TMP_CONCAT_SIZE, "%s%x%s%x",
+			 NAND_MANF_CMDLINE, nand_flash_man_code, NAND_DEV_CMDLINE, nand_flash_dev_id);
+		cmdline_append(cmdline_tmpbuf);
+#endif
+		ret = load_vfy_boot(BOOTIMG_TYPE_BOOT, CFG_BOOTIMG_LOAD_ADDR);
+		PAL_ASSERT(ret >= 0);
+
+		PROFILING_END();
+		break;
+
+	case FASTBOOT:
+	case DOWNLOAD_BOOT:
+	case UNKNOWN_BOOT:
+		break;
+
+	}
+
+	kernel_target_addr = get_kernel_target_addr();
+	ramdisk_target_addr = get_ramdisk_target_addr();
+	ramdisk_addr = get_ramdisk_addr();
+	ramdisk_real_sz = get_ramdisk_real_sz();
+	tags_target_addr = get_tags_addr();
+
+	PAL_ASSERT(kernel_target_addr != 0);
+	PAL_ASSERT(ramdisk_target_addr != 0);
+	PAL_ASSERT(ramdisk_addr != 0);
+#if (!defined(SYSTEM_AS_ROOT) && !defined(MTK_RECOVERY_RAMDISK_SPLIT))
+	PAL_ASSERT(ramdisk_real_sz != 0);
+#endif
+
+#ifdef MTK_3LEVEL_PAGETABLE
+	/* rootfs addr */
+	arch_mmu_map((uint64_t)ramdisk_target_addr,
+		(uint32_t)ramdisk_target_addr,
+		MMU_MEMORY_TYPE_NORMAL_WRITE_BACK | MMU_MEMORY_AP_P_RW_U_NA,
+		ROUNDUP(LK_RAMDISK_MAX_SIZE, PAGE_SIZE));
+#endif
+#ifdef MTK_RECOVERY_RAMDISK_SPLIT
+	if (g_boot_mode == RECOVERY_BOOT) {
+		uint32_t ramdisk_compressed_sz;
+		load_vfy_ramdisk(&ramdisk_compressed_sz);
+		ramdisk_real_sz = ramdisk_compressed_sz;
+	}
+	else
+#endif /* MTK_RECOVERY_RAMDISK_SPLIT */
+	/* relocate rootfs */
+	memcpy((void *)ramdisk_target_addr,
+		(void *)ramdisk_addr,
+		(size_t)ramdisk_real_sz);
+
+	custom_port_in_kernel(g_boot_mode, cmdline_get());
+
+	/* append cmdline from bootimg hdr */
+	cmdline_append(get_cmdline());
+
+#ifdef SELINUX_STATUS
+#if SELINUX_STATUS == 1
+	cmdline_append("androidboot.selinux=disabled");
+#elif SELINUX_STATUS == 2
+	cmdline_append("androidboot.selinux=permissive");
+#endif
+#endif
+
+	/* This is patch for Android Test Mode(ATM). */
+	/* 1. Sets kernel cmdline for ATM only in normal mode
+	* 2. Bypass write protect in boot mode "normal" when ATM is enabled.
+	* Background:
+	* "proinfo" partition is write protected in boot mode "normal". When ATM is enabled,
+	* we bypass write protection since we needs to write to proinfo. Whether device is in ATM
+	* should also be passed to kernel through cmdline, only seen in normal mode
+	*/
+	if (g_boot_mode == NORMAL_BOOT) {
+		if (true == get_atm_enable_status()) {
+			cmdline_append("androidboot.atm=enable");
+		} else if (false == get_atm_enable_status()) {
+			write_protect_flow();
+			cmdline_append("androidboot.atm=disabled");
+		}
+	}
+
+	/* pass the meta_log_disable to user space logger, default is enable */
+	if (is_meta_log_disable && (is_meta_log_disable() == 1)) {
+		cmdline_append("androidboot.meta_log_disable=1");
+	} else {
+		cmdline_append("androidboot.meta_log_disable=0");
+	}
+
+	/* send kernel the dtbo_idx upon overlay success */
+	if (hw_mdtbo_index != 0xff) {
+		sprintf(cmdline_tmpbuf, "androidboot.dtbo_idx=%d", hw_mdtbo_index);
+		cmdline_append(cmdline_tmpbuf);
+	}
+
+	/* pass related root of trust info via SMC call */
+	if (send_root_of_trust_info != NULL)
+		send_root_of_trust_info();
+
+	boot_linux((void *)kernel_target_addr,
+			(unsigned *)tags_target_addr,
+		   	board_machtype(),
+			(void *)ramdisk_target_addr,
+			ramdisk_real_sz);
+
+	while (1);
+
+	return 0;
+}
 void msg_header_error(char *img_name)
 {
 	pal_log_err("[MBOOT] Load '%s' partition Error\n", img_name);
@@ -762,11 +919,7 @@ int boot_linux_fdt(void *kernel, unsigned *tags,
 		}
 #endif
 #endif
-    if(dtb_addr1 != NULL){
-        memcpy(fdt, (void *)dtb_addr1, dtb_size1);
-        ret = setup_fdt(fdt,
-			dtb_size1);
-}
+
 	extern int setup_mem_property_use_mblock_info(dt_dram_info *,
 			size_t) __attribute__((weak));
 	if (setup_mem_property_use_mblock_info) {
@@ -1506,7 +1659,152 @@ void get_AB_OTA_name(char *part_name, int size)
 }
 #endif /* MTK_AB_OTA_UPDATER */
 
+void boot_linux_fastboot(const char *arg, void *data, unsigned sz){
+    uint32_t kernel_target_addr = 0;
+	uint32_t ramdisk_target_addr = 0;
+	uint32_t tags_addr = 0;
+	uint32_t ramdisk_addr = 0;
+	uint32_t ramdisk_real_sz = 0;
+    uint32_t kernel_addr = 0;
+#define CMDLINE_TMP_CONCAT_SIZE 110
+	char cmdline_tmpbuf[CMDLINE_TMP_CONCAT_SIZE];
+	switch (g_boot_mode) {
+	case NORMAL_BOOT:
+	case META_BOOT:
+	case ADVMETA_BOOT:
+	case SW_REBOOT:
+	case ALARM_BOOT:
+#ifdef MTK_KERNEL_POWER_OFF_CHARGING
+	case KERNEL_POWER_OFF_CHARGING_BOOT:
+	case LOW_POWER_OFF_CHARGING_BOOT:
+#endif
+		PROFILING_START("load boot image");
+#if defined(CFG_NAND_BOOT)
+		snprintf(cmdline_tmpbuf, CMDLINE_TMP_CONCAT_SIZE, "%s%x%s%x",
+			 NAND_MANF_CMDLINE, nand_flash_man_code, NAND_DEV_CMDLINE, nand_flash_dev_id);
+		cmdline_append(cmdline_tmpbuf);
+#endif
+        int ret;
+		ret = load_vfy_boot(BOOTIMG_TYPE_BOOT, CFG_BOOTIMG_LOAD_ADDR);
+		PAL_ASSERT(ret >= 0);
 
+		PROFILING_END();
+		break;
+
+	case RECOVERY_BOOT:
+		/* it's boot.img when system as root is enabled, and is *
+		 * recovery.img when system as root is disabled. *
+		 */
+		PROFILING_START("load recovery image");
+        int ret;
+		ret = load_vfy_boot(BOOTIMG_TYPE_RECOVERY, CFG_BOOTIMG_LOAD_ADDR);
+		PAL_ASSERT(ret >= 0);
+
+		PROFILING_END();
+		break;
+
+	case FACTORY_BOOT:
+	case ATE_FACTORY_BOOT:
+		/* it's boot.img, we don't have standalone factory image now */
+		PROFILING_START("load factory image");
+#if defined(CFG_NAND_BOOT)
+		snprintf(cmdline_tmpbuf, CMDLINE_TMP_CONCAT_SIZE, "%s%x%s%x",
+			 NAND_MANF_CMDLINE, nand_flash_man_code, NAND_DEV_CMDLINE, nand_flash_dev_id);
+		cmdline_append(cmdline_tmpbuf);
+#endif
+        int ret;
+		ret = load_vfy_boot(BOOTIMG_TYPE_BOOT, CFG_BOOTIMG_LOAD_ADDR);
+		PAL_ASSERT(ret >= 0);
+
+		PROFILING_END();
+		break;
+
+	case FASTBOOT:
+	case DOWNLOAD_BOOT:
+	case UNKNOWN_BOOT:
+		break;
+
+	}
+    kernel_target_addr = get_kernel_target_addr();
+	ramdisk_target_addr = get_ramdisk_target_addr();
+	ramdisk_addr = get_ramdisk_addr();
+	ramdisk_real_sz = get_ramdisk_real_sz();
+	tags_addr = get_tags_addr();
+    kernel_addr = get_kernel_target_addr();
+    video_printf("Got addresses");
+    unsigned kernel_actual;
+	unsigned ramdisk_actual;
+	struct bootimg_hdr *boot_hdr;
+	char *ptr = ((char *) data);
+	unsigned page_sz = 0;
+	unsigned page_mask = 0;
+
+
+	boot_hdr = (struct bootimg_hdr *)malloc(sizeof(struct bootimg_hdr));
+	memcpy(boot_hdr, data, sizeof(struct bootimg_hdr));
+
+	
+
+	/* ensure commandline is terminated */
+	boot_hdr->cmdline[BOOTIMG_ARGS_SZ - 1] = 0;
+
+	if (boot_hdr->page_sz) {
+		page_sz = boot_hdr->page_sz;
+		page_mask = page_sz - 1;
+		//page_mask = 2*1024 ; /*FIXME*/
+	} 
+	kernel_actual = boot_hdr->kernel_sz;
+	ramdisk_actual = boot_hdr->ramdisk_sz;
+    int decompress_outbuf_size = KERNEL_DECOMPRESS_SIZE;
+    decompress_kernel((ptr + boot_hdr->page_sz), (void *)kernel_target_addr, boot_hdr->kernel_sz, (int)decompress_outbuf_size);
+    video_printf("decompressed");
+#ifdef MTK_3LEVEL_PAGETABLE
+	/* rootfs addr */
+	arch_mmu_map((uint64_t)boot_hdr->ramdisk_addr, (uint32_t)boot_hdr->ramdisk_addr,
+		     MMU_MEMORY_TYPE_NORMAL_WRITE_BACK | MMU_MEMORY_AP_P_RW_U_NA,
+		     ROUNDUP(boot_hdr->ramdisk_sz, PAGE_SIZE));
+#endif
+	memmove((void *) boot_hdr->ramdisk_addr, (ptr + boot_hdr->page_sz + kernel_actual), boot_hdr->ramdisk_sz);
+memmove(ramdisk_target_addr,(ptr + boot_hdr->page_sz + kernel_actual), boot_hdr->ramdisk_sz);
+#ifndef MACH_FPGA
+	cmdline_append((char *)boot_hdr->cmdline);
+	snprintf(cmdline_tmpbuf, CMDLINE_TMP_CONCAT_SIZE, "lcm=%1d-%s",
+		 DISP_IsLcmFound(), mt_disp_get_lcm_id());
+	cmdline_append(cmdline_tmpbuf);
+	snprintf(cmdline_tmpbuf, CMDLINE_TMP_CONCAT_SIZE, "fps=%1d",
+		 mt_disp_get_lcd_time());
+	cmdline_append(cmdline_tmpbuf);
+	snprintf(cmdline_tmpbuf, CMDLINE_TMP_CONCAT_SIZE, "vram=%1d",
+		 DISP_GetVRamSize());
+	cmdline_append(cmdline_tmpbuf);
+#endif
+
+#ifdef SELINUX_STATUS
+#if SELINUX_STATUS == 1
+	cmdline_append("androidboot.selinux=disabled");
+#elif SELINUX_STATUS == 2
+	cmdline_append("androidboot.selinux=permissive");
+#endif
+#endif
+
+	fastboot_okay("");
+	udc_stop();
+	//mtk_wdt_init(); //re-open wdt
+
+
+	g_boot_mode = NORMAL_BOOT;
+	custom_port_in_kernel(g_boot_mode, cmdline_get());
+	dprintf(CRITICAL, "Kernel Address: 0x%8X\n", boot_hdr->kernel_addr);
+	dprintf(CRITICAL, "Ramdisk Address: 0x%8X\n", boot_hdr->ramdisk_addr);
+	dprintf(CRITICAL, "Atag Address: 0x%8X\n", tags_addr);
+	dprintf(CRITICAL, "Command: %s\n", boot_hdr->cmdline);
+    video_printf("boot linux");
+	boot_linux_fdt((void *) kernel_target_addr, tags_addr, board_machtype(),
+		   ramdisk_target_addr, boot_hdr->ramdisk_sz, boot_hdr->kernel_sz, kernel_target_addr, NULL, NULL);
+_cmd_boot_exit:
+	free(boot_hdr);
+	return;
+}
 int boot_linux_ext2(char *kernel_path, char *ramdisk_path, char *cmdline, char *dtb_path){
 	int ret = 0;
 	uint32_t kernel_target_addr = 0;
@@ -1646,15 +1944,15 @@ int boot_linux_ext2(char *kernel_path, char *ramdisk_path, char *cmdline, char *
 
 	return -1; //something went wrong*/
 }
-int boot_linux_from_storage(void)
+int boot_linux_ram(uint32_t kaddr,  uint32_t taddr, char cmdline, uint32_t raddr, uint32_t rs, uint32_t ks)
 {
 	int ret = 0;
 	uint32_t kernel_target_addr = 0;
 	uint32_t ramdisk_target_addr = 0;
-	uint32_t tags_target_addr = 0;
+	uint32_t tags_addr = 0;
 	uint32_t ramdisk_addr = 0;
 	uint32_t ramdisk_real_sz = 0;
-
+    uint32_t kernel_addr = 0;
 #define CMDLINE_TMP_CONCAT_SIZE 110
 	char cmdline_tmpbuf[CMDLINE_TMP_CONCAT_SIZE];
 	switch (g_boot_mode) {
@@ -1712,96 +2010,36 @@ int boot_linux_from_storage(void)
 		break;
 
 	}
-
-	kernel_target_addr = get_kernel_target_addr();
+    cmdline_append(cmdline);
+    kernel_target_addr = get_kernel_target_addr();
 	ramdisk_target_addr = get_ramdisk_target_addr();
 	ramdisk_addr = get_ramdisk_addr();
 	ramdisk_real_sz = get_ramdisk_real_sz();
-	tags_target_addr = get_tags_addr();
-
-	PAL_ASSERT(kernel_target_addr != 0);
-	PAL_ASSERT(ramdisk_target_addr != 0);
-	PAL_ASSERT(ramdisk_addr != 0);
-#if (!defined(SYSTEM_AS_ROOT) && !defined(MTK_RECOVERY_RAMDISK_SPLIT))
-	PAL_ASSERT(ramdisk_real_sz != 0);
-#endif
-
-#ifdef MTK_3LEVEL_PAGETABLE
-	/* rootfs addr */
-	arch_mmu_map((uint64_t)ramdisk_target_addr,
-		(uint32_t)ramdisk_target_addr,
-		MMU_MEMORY_TYPE_NORMAL_WRITE_BACK | MMU_MEMORY_AP_P_RW_U_NA,
-		ROUNDUP(LK_RAMDISK_MAX_SIZE, PAGE_SIZE));
-#endif
-#ifdef MTK_RECOVERY_RAMDISK_SPLIT
-	if (g_boot_mode == RECOVERY_BOOT) {
-		uint32_t ramdisk_compressed_sz;
-		load_vfy_ramdisk(&ramdisk_compressed_sz);
-		ramdisk_real_sz = ramdisk_compressed_sz;
-	}
-	else
-#endif /* MTK_RECOVERY_RAMDISK_SPLIT */
-	/* relocate rootfs */
-	memcpy((void *)ramdisk_target_addr,
-		(void *)ramdisk_addr,
-		(size_t)ramdisk_real_sz);
-
-	custom_port_in_kernel(g_boot_mode, cmdline_get());
-
-	/* append cmdline from bootimg hdr */
-	cmdline_append(get_cmdline());
-
-#ifdef SELINUX_STATUS
-#if SELINUX_STATUS == 1
-	cmdline_append("androidboot.selinux=disabled");
-#elif SELINUX_STATUS == 2
-	cmdline_append("androidboot.selinux=permissive");
-#endif
-#endif
-
-	/* This is patch for Android Test Mode(ATM). */
-	/* 1. Sets kernel cmdline for ATM only in normal mode
-	* 2. Bypass write protect in boot mode "normal" when ATM is enabled.
-	* Background:
-	* "proinfo" partition is write protected in boot mode "normal". When ATM is enabled,
-	* we bypass write protection since we needs to write to proinfo. Whether device is in ATM
-	* should also be passed to kernel through cmdline, only seen in normal mode
-	*/
-	if (g_boot_mode == NORMAL_BOOT) {
-		if (true == get_atm_enable_status()) {
-			cmdline_append("androidboot.atm=enable");
-		} else if (false == get_atm_enable_status()) {
-			write_protect_flow();
-			cmdline_append("androidboot.atm=disabled");
-		}
-	}
-
-	/* pass the meta_log_disable to user space logger, default is enable */
-	if (is_meta_log_disable && (is_meta_log_disable() == 1)) {
-		cmdline_append("androidboot.meta_log_disable=1");
-	} else {
-		cmdline_append("androidboot.meta_log_disable=0");
-	}
-
-	/* send kernel the dtbo_idx upon overlay success */
-	if (hw_mdtbo_index != 0xff) {
-		sprintf(cmdline_tmpbuf, "androidboot.dtbo_idx=%d", hw_mdtbo_index);
-		cmdline_append(cmdline_tmpbuf);
-	}
-
-	/* pass related root of trust info via SMC call */
-	if (send_root_of_trust_info != NULL)
-		send_root_of_trust_info();
-
-	boot_linux((void *)kernel_target_addr,
-			(unsigned *)tags_target_addr,
+	tags_addr = get_tags_addr();
+    kernel_addr = get_kernel_target_addr();
+	unsigned char *kernel_raw = NULL;
+	off_t kernel_raw_size = 0;
+	off_t ramdisk_size = 0;
+	off_t dtb_size = 0;
+	kernel_raw_size = ks;
+	kernel_raw = ramdisk_addr; //right where the biggest possible decompressed kernel would end; sure to be out of the way
+	memcpy(kernel_raw, kaddr, kernel_raw_size);
+	memcpy(kernel_target_addr, kernel_raw, kernel_raw_size);
+    memcpy(target_get_scratch_address(), kernel_raw, kernel_raw_size);
+	kernel_raw = NULL; //get rid of dangerous reference to ramdisk_addr before it can do harm
+	ramdisk_size = rs;
+	memcpy(ramdisk_addr, raddr, ramdisk_size);
+    memcpy(ramdisk_target_addr, ramdisk_addr, ramdisk_size);
+    memcpy(kernel_target_addr+kernel_raw_size, ramdisk_addr, ramdisk_size);
+    video_printf("boot linux fdt");
+    	boot_linux_fdt((void *)kernel_addr,
+			(unsigned *)tags_addr,
 		   	board_machtype(),
 			(void *)ramdisk_target_addr,
-			ramdisk_real_sz);
+			ramdisk_real_sz, kernel_raw_size, kernel_addr, kernel_target_addr+kernel_raw_size, dtb_size);
 
-	while (1);
 
-	return 0;
+	return -1; //something went wrong*/
 }
 
 #if defined(CONFIG_MTK_USB_UNIQUE_SERIAL) || (defined(MTK_SECURITY_SW_SUPPORT) && defined(MTK_SEC_FASTBOOT_UNLOCK_SUPPORT))

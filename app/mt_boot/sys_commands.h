@@ -34,6 +34,7 @@
 
 void cmd_getvar(const char *arg, void *data, unsigned sz);
 void cmd_boot(const char *arg, void *data, unsigned sz);
+void cmd_bootkernel(const char *arg, void *data, unsigned sz);
 void cmd_reboot(const char *arg, void *data, unsigned sz);
 void cmd_reboot_bootloader(const char *arg, void *data, unsigned sz);
 void cmd_download(const char *arg, void *data, unsigned sz);

@@ -93,6 +93,14 @@ uint32_t mkimg_hdr_valid(uint8_t *buf)
 		return 0;
 }
 
+uint32_t copy_bootimg_hdr(uint32_t addr)
+{
+    memcpy((uint8_t *)&g_bootimg_hdr,addr,sizeof(g_bootimg_hdr));
+    memcpy((uint8_t *)&g_mkimg_hdr, addr+BOOTIMG_HDR_SZ, sizeof(g_mkimg_hdr.info));
+    g_boot_info.hdr_loaded = 1;
+	g_boot_info.type = BOOTIMG_TYPE_BOOT;
+	return 0;
+}
 uint32_t load_bootimg_hdr(uint32_t bootimg_type)
 {
 	uint32_t ret = 0;

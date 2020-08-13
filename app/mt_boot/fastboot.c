@@ -869,6 +869,7 @@ int fastboot_init(void *base, unsigned size)
 	fastboot_register("oem ultraflash_en", cmd_oem_ultra_flash_en, TRUE, TRUE);
 	fastboot_register("ultraflash:", cmd_oem_ultra_flash, TRUE, TRUE);
 #endif
+    fastboot_register("oem boot_kernel",cmd_bootkernel, TRUE, TRUE);
 	event_init(&usb_online, 0, EVENT_FLAG_AUTOUNSIGNAL);
 	event_init(&txn_done, 0, EVENT_FLAG_AUTOUNSIGNAL);
 
