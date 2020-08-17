@@ -27,6 +27,7 @@ int num_of_boot_entries;
 void draw_menu_extras();
 struct boot_entry *entry_list;
 bool booting=false;
+int sleep_time=-1;
 lv_obj_t *menu = NULL;
 lv_obj_t *bootings = NULL;
 lv_obj_t *extras = NULL;
@@ -66,6 +67,12 @@ static int sleep_thread(void * arg) {
     lv_tick_inc(10);
     lv_task_handler();
     thread_sleep(10);
+    if(sleep_time!=1){
+        if(sleep_time==0)
+            boot_linux_from_storage();
+        else
+            sleep_time-=10;
+    }
     //if(booting){
       //  break;
     //}
@@ -114,11 +121,9 @@ static void event_handler(lv_obj_t * obj, lv_event_t event)
         video_printf("um_of_boot_entries: %d index: %d\n",num_of_boot_entries, index);
         
         if(index==0){
-    // video_clean_screen();
-        
            draw_menu_extras(); 
-        thread_sleep(1000);
-        boot_linux_from_storage();
+        sleep_time = 1000;
+        //boot_linux_from_storage();
         return;
         }
         if(index==num_of_boot_entries)
