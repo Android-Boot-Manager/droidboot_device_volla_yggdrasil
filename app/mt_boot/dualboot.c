@@ -26,20 +26,20 @@ typedef unsigned int        u32;
 int num_of_boot_entries;
 void draw_menu_extras();
 struct boot_entry *entry_list;
-bool booting=false;
 lv_obj_t *menu = NULL;
 lv_obj_t *bootings = NULL;
 lv_obj_t *extras = NULL;
 lv_obj_t *about = NULL;
+lv_obj_t *booting = NULL;
 struct boot_entry_now {
     bool boot;
     int sleep_time;
-    char title;
+    char *title;
     bool internal;
-	char kernel_p;
-    char ramdisk_p;
-    char cmdline;
-    char logopath;
+	char *kernel_p;
+    char *ramdisk_p;
+    char *cmdline;
+    char *logopath;
 };
 struct boot_entry_now boot_now;
 typedef struct mmc_sdhci_bdev {
@@ -87,9 +87,6 @@ static int sleep_thread(void * arg) {
                 boot_now.sleep_time-=10;
         }
     }
-    if(booting){
-        break;
-    }
   }
 
   return 0;
@@ -135,12 +132,15 @@ static void event_handler(lv_obj_t * obj, lv_event_t event)
         video_printf("um_of_boot_entries: %d index: %d\n",num_of_boot_entries, index);
         
         if(index==0){
-           draw_menu_extras(); 
         boot_now.boot=true;
-        boot_now.title="Hi";
+        boot_now.title=malloc(strlen(entry_list->title));
+        strcpy(boot_now.title, entry_list->title);
+        boot_now.title = entry_list->title;
+        video_printf("string: %s", entry_list->title);
+        video_printf("string1: %s", boot_now.title);
         boot_now.internal=true;
-        boot_now.sleep_time = 1000;
-        
+        boot_now.sleep_time = 100;
+        draw_booting();
         //boot_linux_from_storage();
         return;
         }
@@ -163,7 +163,6 @@ static void event_handler(lv_obj_t * obj, lv_event_t event)
 		    strcat(initrd, (entry_list + index)->initrd);
             strcpy(dtb, "/boot/");
 		    strcat(dtb, (entry_list + index)->dtb);
-            booting=true;
             boot_linux_ext2(linux, initrd, (entry_list + index)->options, dtb);
         }
     }
@@ -239,6 +238,19 @@ void draw_menu_extras()
     lv_obj_set_event_cb(list_btn, about_handler);
 }
 
+void draw_booting()
+{
+    booting = lv_obj_create(NULL, NULL);
+    lv_scr_load(booting);
+    lv_obj_del(menu);
+    lv_obj_t * win = lv_win_create(lv_scr_act(), NULL);
+    lv_win_set_title(win, "Booting"); 
+    lv_obj_t * label1 = lv_label_create(win, NULL);
+    lv_label_set_align(label1, LV_LABEL_ALIGN_CENTER);       /*Center aligned lines*/
+    lv_label_set_text_fmt(label1, "Booting: %s", boot_now.title);
+    lv_obj_set_width(label1, 150);
+    lv_obj_align(label1, NULL, LV_ALIGN_CENTER, 0, -30);
+}
 void create_menu()
 {
     menu = lv_obj_create(NULL, NULL);
