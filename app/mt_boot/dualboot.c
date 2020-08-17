@@ -27,11 +27,21 @@ int num_of_boot_entries;
 void draw_menu_extras();
 struct boot_entry *entry_list;
 bool booting=false;
-int sleep_time=-1;
 lv_obj_t *menu = NULL;
 lv_obj_t *bootings = NULL;
 lv_obj_t *extras = NULL;
 lv_obj_t *about = NULL;
+struct boot_entry_now {
+    bool boot;
+    int sleep_time;
+    char title;
+    bool internal;
+	char kernel_p;
+    char ramdisk_p;
+    char cmdline;
+    char logopath;
+};
+struct boot_entry_now boot_now;
 typedef struct mmc_sdhci_bdev {
   	bdev_t dev; // base device
   
@@ -67,15 +77,19 @@ static int sleep_thread(void * arg) {
     lv_tick_inc(10);
     lv_task_handler();
     thread_sleep(10);
-    if(sleep_time!=1){
-        if(sleep_time==0)
-            boot_linux_from_storage();
-        else
-            sleep_time-=10;
+    if(boot_now.boot){
+        if(boot_now.sleep_time!=1){
+            if(boot_now.sleep_time==0){
+                boot_linux_from_storage();
+                break;
+                }
+            else
+                boot_now.sleep_time-=10;
+        }
     }
-    //if(booting){
-      //  break;
-    //}
+    if(booting){
+        break;
+    }
   }
 
   return 0;
@@ -122,7 +136,11 @@ static void event_handler(lv_obj_t * obj, lv_event_t event)
         
         if(index==0){
            draw_menu_extras(); 
-        sleep_time = 1000;
+        boot_now.boot=true;
+        boot_now.title="Hi";
+        boot_now.internal=true;
+        boot_now.sleep_time = 1000;
+        
         //boot_linux_from_storage();
         return;
         }
@@ -276,6 +294,9 @@ void create_menu()
 }
 void db_init()
 {
+    //Make shure we wount boot yet.
+    boot_now.boot=false;
+
     //Init blockdevice
     cache_init();
 
