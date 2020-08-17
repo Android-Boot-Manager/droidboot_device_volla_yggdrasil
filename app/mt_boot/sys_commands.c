@@ -64,7 +64,6 @@
 #define BOOT_MAGIC_SIZE 8
 #define BOOT_NAME_SIZE 16
 #define BOOT_ARGS_SIZE 512
-
 struct boot_img_hdr
 {
     unsigned char magic[BOOT_MAGIC_SIZE];
@@ -239,6 +238,13 @@ void cmd_oem_ADB_Auto_Enable(const char *arg, void *data, unsigned sz)
 }
 #endif
 
+
+
+static void cmd_oem_lkshell(const char *arg, void *data, unsigned sz) {
+
+	int rc = console_run_command(arg);
+	fastboot_okay("");
+}
 void set_p2u(int mode)
 {
 	if (mode == 1) {

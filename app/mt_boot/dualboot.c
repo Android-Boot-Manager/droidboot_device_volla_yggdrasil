@@ -19,7 +19,7 @@
 #include <block_generic_interface.h>
 #include <lib/partition.h>
 #include "config.h"
-
+#include <platform/mt_leds.h>
 
 #define MMC_HOST_ID                 0
 typedef unsigned int        u32;
@@ -28,6 +28,7 @@ void draw_menu_extras();
 struct boot_entry *entry_list;
 bool booting=false;
 lv_obj_t *menu = NULL;
+lv_obj_t *bootings = NULL;
 lv_obj_t *extras = NULL;
 lv_obj_t *about = NULL;
 typedef struct mmc_sdhci_bdev {
@@ -65,9 +66,9 @@ static int sleep_thread(void * arg) {
     lv_tick_inc(10);
     lv_task_handler();
     thread_sleep(10);
-    if(booting){
-        break;
-    }
+    //if(booting){
+      //  break;
+    //}
   }
 
   return 0;
@@ -109,18 +110,27 @@ void my_disp_flush(lv_disp_t * disp,
 static void event_handler(lv_obj_t * obj, lv_event_t event)
 {
     if(event == LV_EVENT_CLICKED) {
-        video_printf("um_of_boot_entries: %d \n",num_of_boot_entries);
         int index = lv_list_get_btn_index(NULL, obj);
+        video_printf("um_of_boot_entries: %d index: %d\n",num_of_boot_entries, index);
+        
         if(index==0){
-            boot_linux_from_storage();
-            return;
+    // video_clean_screen();
+        
+           draw_menu_extras(); 
+        thread_sleep(1000);
+        boot_linux_from_storage();
+        return;
         }
         if(index==num_of_boot_entries)
         {
         draw_menu_extras();
         }
+      
         else
         {
+            bootings = lv_obj_create(NULL, NULL);
+            lv_scr_load(bootings);
+            lv_obj_del(menu);
             char *linux = malloc(strlen("/boot/") + strlen((entry_list + index)->linux) + 1);
 		    char *initrd = malloc(strlen("/boot/") + strlen((entry_list + index)->initrd) + 1);
             char *dtb = malloc(strlen("/boot/") + strlen((entry_list + index)->dtb) + 1);
@@ -190,7 +200,7 @@ void draw_menu_extras()
     lv_obj_set_size(list2, 1000, 2100);
     lv_obj_align(list2, NULL, LV_ALIGN_IN_TOP_MID, 0, 0);
     lv_list_set_anim_time(list2, 0);
-
+    
     lv_indev_drv_t indev_drv;
     lv_indev_drv_init(&indev_drv);      /*Basic initialization*/
     indev_drv.type = LV_INDEV_TYPE_KEYPAD;
@@ -212,15 +222,14 @@ void create_menu()
     lv_scr_load(menu);
     lv_obj_t * win = lv_win_create(lv_scr_act(), NULL);
     lv_win_set_title(win, "Boot menu"); 
-
     lv_obj_t * list1 = lv_list_create(win, NULL);
     lv_group_t * g1 = lv_group_create();
     lv_group_add_obj(g1, list1);
     lv_group_focus_obj(list1);
-    lv_obj_set_size(list1, 1000, 2100);
-    lv_obj_align(list1, NULL, LV_ALIGN_IN_TOP_MID, 0, 0);
+    lv_obj_set_size(list1, 1074, 2060);
+    lv_obj_align(list1, NULL, LV_ALIGN_IN_TOP_LEFT, 0, 0);
     lv_list_set_anim_time(list1, 0);
-
+    lv_win_set_scrollbar_mode(win, LV_SCRLBAR_MODE_OFF);
     lv_indev_drv_t indev_drv;
     lv_indev_drv_init(&indev_drv);      /*Basic initialization*/
     indev_drv.type = LV_INDEV_TYPE_KEYPAD;
@@ -230,7 +239,7 @@ void create_menu()
     lv_indev_set_group(my_indev, g1);
     
     lv_obj_t * list_btn;
-
+    lv_obj_set_state(list1, LV_STATE_DEFAULT);
     list_btn = lv_list_add_btn(list1, LV_SYMBOL_FILE, entry_list->title);
     lv_obj_set_event_cb(list_btn, event_handler);
     int i;
@@ -240,6 +249,25 @@ void create_menu()
     }
     list_btn = lv_list_add_btn(list1,  LV_SYMBOL_FILE, "Extras");
     lv_obj_set_event_cb(list_btn, event_handler);
+    lv_obj_t * label1;
+    int output = ((get_bat_volt(1) - 3000) / (4200 - 3000)) * 100;
+    lv_obj_t *cont;
+    video_printf("[BATTERY] charging current=%d charger volt=%d percentage =%d\n\r",get_charging_current(1),get_charger_volt(1), output);
+    if (output==0)
+        cont=lv_win_add_btn(win, LV_SYMBOL_BATTERY_EMPTY);
+    if (output < 33)
+        cont=lv_win_add_btn(win, LV_SYMBOL_BATTERY_1);
+    if (output >=33 && output<66)
+        cont=lv_win_add_btn(win, LV_SYMBOL_BATTERY_2);
+    if (output >=66 && output<99)
+        cont=lv_win_add_btn(win, LV_SYMBOL_BATTERY_3);
+    if (output ==100) 
+        cont=(lv_obj_get_parent(lv_win_add_btn(win, LV_SYMBOL_BATTERY_FULL)));
+   
+    label1 = lv_label_create(cont, NULL);
+    lv_label_set_text_fmt(label1, "%d%%", output);
+    lv_obj_align(label1, NULL, LV_ALIGN_IN_TOP_RIGHT, -150, 55);
+
 }
 void db_init()
 {
@@ -272,7 +300,10 @@ void db_init()
     disp_drv.flush_cb = my_disp_flush; /*Set your driver function*/
     disp_drv.buffer = & disp_buf; /*Assign the buffer to the display*/
     lv_disp_drv_register( & disp_drv); /*Finally register the driver*/
-
+    mt65xx_leds_brightness_set(MT65XX_LED_TYPE_LCD, 20);
+    LV_THEME_DEFAULT_INIT(LV_COLOR_GRAY, LV_COLOR_GRAY,
+                          LV_THEME_MATERIAL_FLAG_DARK,
+                          lv_theme_get_font_small(), lv_theme_get_font_normal(), lv_theme_get_font_subtitle(), lv_theme_get_font_title());
     //Draw menu
     create_menu();
     
