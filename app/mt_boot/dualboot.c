@@ -36,8 +36,9 @@ struct boot_entry_now {
     int sleep_time;
     char *title;
     bool internal;
-	char *kernel_p;
-    char *ramdisk_p;
+	char *linux;
+    char *initrd;
+    char *dtb;
     char *cmdline;
     char *logopath;
 };
@@ -71,6 +72,18 @@ static ssize_t bdev_write_block_data(struct bdev *_bdev, void *buf, bnum_t block
     part_id = partition_get_region(index);
     emmc_write(8, ptn+block , (void *)buf,  count*512);
 }
+void boot_entry()
+{
+    if(boot_now.internal)   
+    {
+        boot_linux_from_storage();
+    }
+    else
+    {
+        boot_linux_ext2(boot_now.linux, boot_now.initrd, boot_now.cmdline, boot_now.dtb); 
+    }
+
+}
 static int sleep_thread(void * arg) {
   /*Handle LitlevGL tasks (tickless mode)*/
   while (1) {
@@ -80,7 +93,7 @@ static int sleep_thread(void * arg) {
     if(boot_now.boot){
         if(boot_now.sleep_time!=1){
             if(boot_now.sleep_time==0){
-                boot_linux_from_storage();
+                boot_entry();
                 break;
                 }
             else
@@ -163,7 +176,21 @@ static void event_handler(lv_obj_t * obj, lv_event_t event)
 		    strcat(initrd, (entry_list + index)->initrd);
             strcpy(dtb, "/boot/");
 		    strcat(dtb, (entry_list + index)->dtb);
-            boot_linux_ext2(linux, initrd, (entry_list + index)->options, dtb);
+            boot_now.boot=true;
+            boot_now.title=malloc(strlen((entry_list+index)->title));
+            boot_now.title = entry_list->title;
+            boot_now.linux=malloc(strlen(linux));
+            boot_now.linux = linux;
+            boot_now.initrd=malloc(strlen(initrd));
+            boot_now.initrd = initrd;
+            boot_now.dtb=malloc(strlen(dtb));
+            boot_now.dtb = dtb;
+            boot_now.cmdline=malloc(strlen((entry_list + index)->options));
+            boot_now.cmdline = (entry_list + index)->options;
+            boot_now.internal=false;
+            boot_now.sleep_time = 100;
+            draw_booting();
+            //boot_linux_ext2(linux, initrd, (entry_list + index)->options, dtb);
         }
     }
 }
