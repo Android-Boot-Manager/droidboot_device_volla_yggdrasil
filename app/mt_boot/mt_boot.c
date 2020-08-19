@@ -347,7 +347,7 @@ int boot_linux_from_storage(void)
 		break;
 
 	}
-
+    cmdline_append("ABM.bootloader=1");
 	kernel_target_addr = get_kernel_target_addr();
 	ramdisk_target_addr = get_ramdisk_target_addr();
 	ramdisk_addr = get_ramdisk_addr();
