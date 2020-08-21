@@ -164,9 +164,6 @@ static void event_handler(lv_obj_t * obj, lv_event_t event)
       
         else
         {
-            bootings = lv_obj_create(NULL, NULL);
-            lv_scr_load(bootings);
-            lv_obj_del(menu);
             char *linux = malloc(strlen("/boot/") + strlen((entry_list + index)->linux) + 1);
 		    char *initrd = malloc(strlen("/boot/") + strlen((entry_list + index)->initrd) + 1);
             char *dtb = malloc(strlen("/boot/") + strlen((entry_list + index)->dtb) + 1);
@@ -178,7 +175,7 @@ static void event_handler(lv_obj_t * obj, lv_event_t event)
 		    strcat(dtb, (entry_list + index)->dtb);
             boot_now.boot=true;
             boot_now.title=malloc(strlen((entry_list+index)->title));
-            boot_now.title = entry_list->title;
+            boot_now.title = (entry_list+index)->title;
             boot_now.linux=malloc(strlen(linux));
             boot_now.linux = linux;
             boot_now.initrd=malloc(strlen(initrd));
@@ -312,22 +309,24 @@ void create_menu()
     list_btn = lv_list_add_btn(list1,  LV_SYMBOL_FILE, "Extras");
     lv_obj_set_event_cb(list_btn, event_handler);
     lv_obj_t * label1;
-    int output = ((get_bat_volt(1) - 3000) / (4200 - 3000)) * 100;
+    int volt = get_bat_volt(1);
+    int output = volt - 3000;
+    int p = output / 12;
     lv_obj_t *cont;
-    video_printf("[BATTERY] charging current=%d charger volt=%d percentage =%d\n\r",get_charging_current(1),get_charger_volt(1), output);
-    if (output==0)
-        cont=lv_win_add_btn(win, LV_SYMBOL_BATTERY_EMPTY);
-    if (output < 33)
-        cont=lv_win_add_btn(win, LV_SYMBOL_BATTERY_1);
-    if (output >=33 && output<66)
-        cont=lv_win_add_btn(win, LV_SYMBOL_BATTERY_2);
-    if (output >=66 && output<99)
-        cont=lv_win_add_btn(win, LV_SYMBOL_BATTERY_3);
-    if (output ==100) 
-        cont=(lv_obj_get_parent(lv_win_add_btn(win, LV_SYMBOL_BATTERY_FULL)));
+    video_printf("[BATTERY] charging current=%d charger volt=%d percentage =%d VOLTAGE=%D\n\r",get_charging_current(1),get_charger_volt(1), p, volt);
+    if (p==0)
+        cont=lv_obj_get_parent(lv_win_add_btn(win, LV_SYMBOL_BATTERY_EMPTY));
+    if (p < 33 && p>0)
+        cont=lv_obj_get_parent(lv_win_add_btn(win, LV_SYMBOL_BATTERY_1));
+    if (p >=33 && p<66)
+        cont=lv_obj_get_parent(lv_win_add_btn(win, LV_SYMBOL_BATTERY_2));
+    if (p >=66 && p<99)
+        cont=lv_obj_get_parent(lv_win_add_btn(win, LV_SYMBOL_BATTERY_3));
+    if (p ==100) 
+        cont=lv_obj_get_parent(lv_win_add_btn(win, LV_SYMBOL_BATTERY_FULL));
    
     label1 = lv_label_create(cont, NULL);
-    lv_label_set_text_fmt(label1, "%d%%", output);
+    lv_label_set_text_fmt(label1, "%d%%", p);
     lv_obj_align(label1, NULL, LV_ALIGN_IN_TOP_RIGHT, -150, 55);
 
 }
