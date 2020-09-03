@@ -219,9 +219,10 @@ static void bootmode_handler(lv_obj_t * obj, lv_event_t event)
         int index = lv_list_get_btn_index(NULL, obj);
         if(index==0)
         {   
-            screen_bootmode();
+            
+            boot_linux_from_storage();
         }
-        if(index==2)
+        if(index==1)
         {   
             screen_about();
         }
@@ -235,6 +236,7 @@ void screen_bootmode()
     lv_obj_del(extras);
     lv_obj_t * win = lv_win_create(lv_scr_act(), NULL);
     lv_win_set_title(win, "Boot mode"); 
+    lv_obj_t * list2 = lv_list_create(win, NULL);
 
     lv_obj_set_size(list2, 1074, 2060);
     lv_obj_align(list2, NULL, LV_ALIGN_IN_TOP_LEFT, 0, 0);
@@ -412,9 +414,9 @@ void db_init()
     lv_init();
 
     //Create thread for LVGL
-    thread_t *thr;
-    thr=thread_create("sleeper", & sleep_thread, NULL, HIGHEST_PRIORITY, 16*1024);
-    thread_resume(thr);
+    //thread_t *thr;
+    //thr=thread_create("sleeper", & sleep_thread, NULL, HIGHEST_PRIORITY, 16*1024);
+    //thread_resume(thr);
 
     //Init display and display buffer for LVGL
     static lv_disp_buf_t disp_buf;
@@ -431,6 +433,24 @@ void db_init()
                           lv_theme_get_font_small(), lv_theme_get_font_normal(), lv_theme_get_font_subtitle(), lv_theme_get_font_title());
     //Draw menu
     create_menu();
-    
+
+    //Disable wdt
+    mtk_wdt_disable();
+
+    while (1) {
+        lv_tick_inc(10);
+        lv_task_handler();
+        thread_sleep(10);
+        if(boot_now.boot){
+            if(boot_now.sleep_time!=1){
+                if(boot_now.sleep_time==0){
+                    boot_entry();
+                    break;
+                 }
+               else
+                   boot_now.sleep_time-=10;
+        }
+    }
+  }
 
 }
