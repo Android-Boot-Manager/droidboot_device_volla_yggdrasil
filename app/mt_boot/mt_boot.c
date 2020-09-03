@@ -860,7 +860,7 @@ int boot_linux_fdt(void *kernel, unsigned *tags,
 		pal_log_err("Can't find device tree. Please check your kernel image\n");
 		while (1);
 	}
-	pal_log_info("dtb_addr = 0x%08X, dtb_size = 0x%08X\n", dtb_addr, dtb_size);
+	video_printf("dtb_addr = 0x%08X, dtb_size = 0x%08X\n", dtb_addr, dtb_size);
 
 #if CFG_DTB_EARLY_LOADER_SUPPORT
 	//skip dtb copy, we load dtb in preloader

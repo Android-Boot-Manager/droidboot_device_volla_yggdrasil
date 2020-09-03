@@ -31,6 +31,7 @@ lv_obj_t *bootings = NULL;
 lv_obj_t *extras = NULL;
 lv_obj_t *about = NULL;
 lv_obj_t *booting = NULL;
+lv_obj_t *bootmode = NULL;
 struct boot_entry_now {
     bool boot;
     int sleep_time;
@@ -187,7 +188,6 @@ static void event_handler(lv_obj_t * obj, lv_event_t event)
             boot_now.internal=false;
             boot_now.sleep_time = 100;
             draw_booting();
-            //boot_linux_ext2(linux, initrd, (entry_list + index)->options, dtb);
         }
     }
 }
@@ -213,6 +213,56 @@ bool key_read(lv_indev_drv_t * drv, lv_indev_data_t*data)
    
 }
 
+static void bootmode_handler(lv_obj_t * obj, lv_event_t event)
+{
+    if(event == LV_EVENT_CLICKED) {
+        int index = lv_list_get_btn_index(NULL, obj);
+        if(index==0)
+        {   
+            screen_bootmode();
+        }
+        if(index==2)
+        {   
+            screen_about();
+        }
+    }
+}
+
+void screen_bootmode()
+{
+    bootmode = lv_obj_create(NULL, NULL);
+    lv_scr_load(bootmode);
+    lv_obj_del(extras);
+    lv_obj_t * win = lv_win_create(lv_scr_act(), NULL);
+    lv_win_set_title(win, "Boot mode"); 
+
+    lv_obj_set_size(list2, 1074, 2060);
+    lv_obj_align(list2, NULL, LV_ALIGN_IN_TOP_LEFT, 0, 0);
+    lv_list_set_anim_time(list2, 0);
+    lv_win_set_scrollbar_mode(win, LV_SCRLBAR_MODE_OFF);
+    lv_group_t * g2 = lv_group_create();
+    lv_group_add_obj(g2, list2);
+    lv_group_focus_obj(list2);
+
+    lv_indev_drv_t indev_drv;
+    lv_indev_drv_init(&indev_drv);      /*Basic initialization*/
+    indev_drv.type = LV_INDEV_TYPE_KEYPAD;
+    indev_drv.read_cb = key_read;
+    /*Register the driver in LVGL and save the created input device object*/
+    lv_indev_t * my_indev = lv_indev_drv_register(&indev_drv);
+    lv_indev_set_group(my_indev, g2);
+    
+    lv_obj_t * list_btn;
+    
+    list_btn = lv_list_add_btn(list2,  LV_SYMBOL_FILE, "Normal Boot");
+    lv_obj_set_event_cb(list_btn, bootmode_handler);
+
+    list_btn = lv_list_add_btn(list2,  LV_SYMBOL_FILE, "Recovery");
+    lv_obj_set_event_cb(list_btn, bootmode_handler);
+
+    list_btn = lv_list_add_btn(list2,  LV_SYMBOL_LEFT, "Back");
+}
+
 void screen_about()
 {
     about = lv_obj_create(NULL, NULL);
@@ -227,6 +277,10 @@ static void about_handler(lv_obj_t * obj, lv_event_t event)
         int index = lv_list_get_btn_index(NULL, obj);
         if(index==0)
         {   
+            screen_bootmode();
+        }
+        if(index==2)
+        {   
             screen_about();
         }
     }
@@ -240,12 +294,14 @@ void draw_menu_extras()
     lv_win_set_title(win, "Extras"); 
 
     lv_obj_t * list2 = lv_list_create(win, NULL);
+    lv_obj_set_size(list2, 1074, 2060);
+    lv_obj_align(list2, NULL, LV_ALIGN_IN_TOP_LEFT, 0, 0);
+    lv_list_set_anim_time(list2, 0);
+    lv_win_set_scrollbar_mode(win, LV_SCRLBAR_MODE_OFF);
     lv_group_t * g2 = lv_group_create();
     lv_group_add_obj(g2, list2);
     lv_group_focus_obj(list2);
-    lv_obj_set_size(list2, 1000, 2100);
-    lv_obj_align(list2, NULL, LV_ALIGN_IN_TOP_MID, 0, 0);
-    lv_list_set_anim_time(list2, 0);
+
     
     lv_indev_drv_t indev_drv;
     lv_indev_drv_init(&indev_drv);      /*Basic initialization*/
@@ -256,7 +312,12 @@ void draw_menu_extras()
     lv_indev_set_group(my_indev, g2);
     
     lv_obj_t * list_btn;
+    
+    list_btn = lv_list_add_btn(list2,  LV_SYMBOL_FILE, "Spechial boot");
+    lv_obj_set_event_cb(list_btn, about_handler);
 
+    list_btn = lv_list_add_btn(list2,  LV_SYMBOL_FILE, "Settings");
+    lv_obj_set_event_cb(list_btn, about_handler);
 
     list_btn = lv_list_add_btn(list2,  LV_SYMBOL_FILE, "About ABM");
     lv_obj_set_event_cb(list_btn, about_handler);
