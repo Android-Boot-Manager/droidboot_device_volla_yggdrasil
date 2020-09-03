@@ -75,6 +75,7 @@ static ssize_t bdev_write_block_data(struct bdev *_bdev, void *buf, bnum_t block
 }
 void boot_entry()
 {
+    mtk_wdt_init();
     if(boot_now.internal)   
     {
         boot_linux_from_storage();
