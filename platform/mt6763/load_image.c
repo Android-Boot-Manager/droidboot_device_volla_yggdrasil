@@ -145,18 +145,7 @@ int verified_boot_init(char *part_name, char *img_name)
 #endif
 
 end:
-	ret = print_boot_state();
-	if (ret)
-		return ret;
-
-	if (img_name == NULL)
-		ret = show_warning("UNKNOWN");
-	else
-		ret = show_warning(img_name);
-	if (ret)
-		return ret;
-
-	return ret;
+	return 0;
 }
 
 int verified_boot_flow(char *img_name, uint32_t img_addr, uint32_t img_sz)
@@ -169,8 +158,7 @@ int verified_boot_flow(char *img_name, uint32_t img_addr, uint32_t img_sz)
 	int lock_state = 0;
 #endif
 
-	if (g_boot_state == BOOT_STATE_RED)
-		g_boot_state = BOOT_STATE_GREEN;
+
 
 	g_boot_state = BOOT_STATE_GREEN;
 
@@ -205,7 +193,7 @@ int verified_boot_flow(char *img_name, uint32_t img_addr, uint32_t img_sz)
 			else {
 				ret = sec_oemkey_compare();
 				if (ret)
-					g_boot_state = BOOT_STATE_YELLOW;
+					g_boot_state = BOOT_STATE_GREEN;
 				else
 					g_boot_state = BOOT_STATE_GREEN;
 			}
@@ -215,7 +203,7 @@ int verified_boot_flow(char *img_name, uint32_t img_addr, uint32_t img_sz)
 				/* show public key on LCM and requires user confirmation to proceed */
 				ret = sec_img_auth_custom((uint8_t *)img_addr, img_sz);
 				if (0 == ret)
-					g_boot_state = BOOT_STATE_YELLOW;
+					g_boot_state = BOOT_STATE_GREEN;
 				else
 					g_boot_state = BOOT_STATE_GREEN;
 			}

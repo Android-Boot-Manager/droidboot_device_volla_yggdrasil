@@ -67,63 +67,12 @@ extern void mtk_wdt_restart(void);
 
 int print_boot_state(void)
 {
-	int ret = 0;
-	switch (g_boot_state) {
-	case BOOT_STATE_ORANGE:
-		pal_log_err("boot state: orange\n");
-		break;
-	case BOOT_STATE_YELLOW:
-		pal_log_err("boot state: yellow\n");
-		break;
-	case BOOT_STATE_RED:
-		pal_log_err("boot state: red\n");
-		break;
-	case BOOT_STATE_GREEN:
-		pal_log_err("boot state: green\n");
-		break;
-	default:
-		pal_log_err("boot state: unknown\n");
-		break;
-	}
-
-	return ret;
+	return 0;
 }
 
 int yellow_state_warning(void)
 {
-	const char *title_msg = "yellow state\n\n";
-	unsigned char pubk[PUBK_LEN] = {0};
-	int ret = 0;
-
-	video_clean_screen();
-	video_set_cursor(video_get_rows() / 2, 0);
-	video_printf(title_msg);
-	video_printf("Your device has loaded a different operating system\n");
-	video_printf("ID:\n");
-
-	ret = sec_get_pubk(pubk, PUBK_LEN);
-	if (ret) {
-		video_printf("Cannot get custom public key, abort in 5 seconds\n");
-		mtk_wdt_restart();
-		mdelay(5000);
-		mtk_wdt_restart();
-		return -1;
-	}
-	video_printf("%x %x %x %x %x %x %x %x\n", pubk[0], pubk[1], pubk[2], pubk[3],
-		     pubk[4], pubk[5], pubk[6], pubk[7]);
-	video_printf("Yes (Volume UP)   : Confirm and Boot.\n\n");
-	video_printf("No  (Volume Down) : Abort.\n\n");
-
-	while (1) {
-		mtk_wdt_restart();
-		if (mtk_detect_key(VBOOT_KEYPAD_VOL_UP))
-			return 0;
-		else if (mtk_detect_key(VBOOT_KEYPAD_VOL_DOWN))
-			return -1;
-		else {
-			/* ignore */
-		}
-	}
+    return 0;
 }
 
 int orange_state_warning(void)
@@ -133,99 +82,20 @@ int orange_state_warning(void)
 
 int red_state_warning(const char *img_name)
 {
-	const char *title_msg = "Red State\n\n";
-	int ret = -1;
-	char show_img_name[MAX_IMG_NAME_LEN] = {0};
-	int copy_len = MAX_IMG_NAME_LEN;
 
-	if (img_name != NULL) {
-		copy_len = strlen(img_name);
-		if (copy_len >= MAX_IMG_NAME_LEN)
-			copy_len = MAX_IMG_NAME_LEN - 1;
-		if (img_name[0] == '/') {
-			memcpy((show_img_name + 1), img_name, copy_len - 1);
-			show_img_name[copy_len - 1] = '\0';
-		} else {
-			memcpy(show_img_name, img_name, copy_len);
-			show_img_name[copy_len] = '\0';
-		}
-	}
-
-	video_clean_screen();
-	video_set_cursor(video_get_rows() / 2, 0);
-	video_printf(title_msg);
-	video_printf("Your device has failed verification and may not\n");
-	video_printf("work properly.\n");
-	video_printf("Please download %s image with correct signature\n", show_img_name);
-	video_printf("or disable verified boot.\n");
-	video_printf("Your device will reboot in 5 seconds.\n");
-	mtk_wdt_restart();
-	mdelay(5000);
-	mtk_wdt_restart();
-
-	return ret;
+	return 0;
 }
 
 int show_warning(const char *img_name)
 {
-	int ret = 0;
-	switch (g_boot_state) {
-	case BOOT_STATE_ORANGE:
-		ret = orange_state_warning();
-		break;
-	case BOOT_STATE_YELLOW:
-#ifdef MTK_SECURITY_YELLOW_STATE_SUPPORT
-		ret = yellow_state_warning();
-		if (0 == ret) /* user confirms to boot into yellow state */
-			break;
-		/* fall into red state if user refuses to enter yellow state */
-#else
-		ret = 0;
-		/* fall into red state since yellow state is not supported */
-#endif
-	case BOOT_STATE_RED:
-	case BOOT_STATE_GREEN:
-	default:
-		break;
-	}
-
-	return ret;
+	return 0;
 }
 
 int set_boot_state_to_cmdline()
 {
-	int ret = 0;
-
-	switch (g_boot_state) {
-	case BOOT_STATE_ORANGE:
-		cmdline_append("androidboot.verifiedbootstate=orange");
-		break;
-	case BOOT_STATE_YELLOW:
-		cmdline_append("androidboot.verifiedbootstate=yellow");
-		break;
-	case BOOT_STATE_RED:
-		cmdline_append("androidboot.verifiedbootstate=yellow");
-		break;
-	case BOOT_STATE_GREEN:
-		cmdline_append("androidboot.verifiedbootstate=yellow");;
-		break;
-	default:
-		break;
-	}
-
-	return ret;
+    cmdline_append("androidboot.verifiedbootstate=green");
+	return 0;
 }
 
-void show_sec_reminder_warning(void)
-{
-	video_clean_screen();
-	video_set_cursor(video_get_rows() / 2, 0);
-	video_printf("Your device has wrong setting and may not\n");
-	video_printf("work properly\n");
-	video_printf("Your device will boot in 5 seconds\n");
-	mtk_wdt_restart();
-	mdelay(5000);
-	mtk_wdt_restart();
-	return;
-}
+
 
