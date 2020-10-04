@@ -23,15 +23,20 @@
 
 #define MMC_HOST_ID                 0
 typedef unsigned int        u32;
+
 int num_of_boot_entries;
 void draw_menu_extras();
+
 struct boot_entry *entry_list;
+
+//Screens
 lv_obj_t *menu = NULL;
 lv_obj_t *bootings = NULL;
 lv_obj_t *extras = NULL;
 lv_obj_t *about = NULL;
 lv_obj_t *booting = NULL;
 lv_obj_t *bootmode = NULL;
+
 struct boot_entry_now {
     bool boot;
     int sleep_time;
@@ -43,14 +48,16 @@ struct boot_entry_now {
     char *cmdline;
     char *logopath;
 };
+
 struct boot_entry_now boot_now;
+
 typedef struct mmc_sdhci_bdev {
   	bdev_t dev; // base device
   
   	struct mmc_device *mmcdev;
   } mmc_sdhci_bdev_t;
 
-
+//Read from emmc
 static ssize_t bdev_read_block_data(struct bdev *_bdev, void *buf, bnum_t block, size_t len, size_t len1)
 {
         unsigned long long ptn = 0;
@@ -62,17 +69,21 @@ static ssize_t bdev_read_block_data(struct bdev *_bdev, void *buf, bnum_t block,
     part_id = partition_get_region(index);
     emmc_read(8, ptn+block , (void *)buf, len1);
 }
+
+//Write to emmc
 static ssize_t bdev_write_block_data(struct bdev *_bdev, void *buf, bnum_t block, u32 count)
 {
     unsigned long long ptn = 0;
 	unsigned long long size = 0;
 	int index = 0; 
     unsigned int part_id;
-   index = partition_get_index("userdata");
+    index = partition_get_index("userdata");
     ptn = partition_get_offset(index);
     part_id = partition_get_region(index);
     emmc_write(8, ptn+block , (void *)buf,  count*512);
 }
+
+//Boot linux based on "boot_now"
 void boot_entry()
 {
     mtk_wdt_init();
@@ -86,6 +97,8 @@ void boot_entry()
     }
 
 }
+
+//lvgl thread
 static int sleep_thread(void * arg) {
   /*Handle LitlevGL tasks (tickless mode)*/
   while (1) {
@@ -97,19 +110,16 @@ static int sleep_thread(void * arg) {
             if(boot_now.sleep_time==0){
                 boot_entry();
                 break;
-                }
+            }
             else
                 boot_now.sleep_time-=10;
         }
     }
   }
-
   return 0;
 }
 
-
-
-
+//Init emmc and bio
 void cache_init(){
     bio_init();
     struct mmc_card *card;
@@ -126,6 +136,7 @@ void cache_init(){
 	/* register it */
 	bio_register_device(&bdev->dev);
 }
+//Display flush
 void my_disp_flush(lv_disp_t * disp,
   const lv_area_t * area, lv_color_t * color_p) {
   uint x, y;
@@ -140,6 +151,8 @@ void my_disp_flush(lv_disp_t * disp,
   lv_disp_flush_ready(disp); /* Indicate you are ready with the flushing*/
 }
 
+
+//Buttons handler
 static void event_handler(lv_obj_t * obj, lv_event_t event)
 {
     if(event == LV_EVENT_CLICKED) {
@@ -161,7 +174,7 @@ static void event_handler(lv_obj_t * obj, lv_event_t event)
         }
         if(index==num_of_boot_entries)
         {
-        draw_menu_extras();
+            draw_menu_extras();
         }
       
         else
@@ -193,6 +206,7 @@ static void event_handler(lv_obj_t * obj, lv_event_t event)
     }
 }
 
+//Read keys state
 bool key_read(lv_indev_drv_t * drv, lv_indev_data_t*data)
 {
     data->key = LV_KEY_UP;
@@ -214,13 +228,13 @@ bool key_read(lv_indev_drv_t * drv, lv_indev_data_t*data)
    
 }
 
+//Handle user selection
 static void bootmode_handler(lv_obj_t * obj, lv_event_t event)
 {
     if(event == LV_EVENT_CLICKED) {
         int index = lv_list_get_btn_index(NULL, obj);
         if(index==0)
         {   
-            
             boot_linux_from_storage();
         }
         if(index==1)
@@ -230,6 +244,7 @@ static void bootmode_handler(lv_obj_t * obj, lv_event_t event)
     }
 }
 
+//Bootmode screen
 void screen_bootmode()
 {
     bootmode = lv_obj_create(NULL, NULL);
@@ -266,6 +281,9 @@ void screen_bootmode()
     list_btn = lv_list_add_btn(list2,  LV_SYMBOL_LEFT, "Back");
 }
 
+
+//About screen
+//TODO: add something here
 void screen_about()
 {
     about = lv_obj_create(NULL, NULL);
@@ -274,7 +292,9 @@ void screen_about()
     lv_obj_t * win = lv_win_create(lv_scr_act(), NULL);
     lv_win_set_title(win, "About"); 
 }
-static void about_handler(lv_obj_t * obj, lv_event_t event)
+
+//Extras screen handler
+static void extras_handler(lv_obj_t * obj, lv_event_t event)
 {
     if(event == LV_EVENT_CLICKED) {
         int index = lv_list_get_btn_index(NULL, obj);
@@ -288,6 +308,8 @@ static void about_handler(lv_obj_t * obj, lv_event_t event)
         }
     }
 }
+
+//Extras menu
 void draw_menu_extras()
 {
     extras = lv_obj_create(NULL, NULL);
@@ -317,15 +339,16 @@ void draw_menu_extras()
     lv_obj_t * list_btn;
     
     list_btn = lv_list_add_btn(list2,  LV_SYMBOL_FILE, "Spechial boot");
-    lv_obj_set_event_cb(list_btn, about_handler);
+    lv_obj_set_event_cb(list_btn, extras_handler);
 
     list_btn = lv_list_add_btn(list2,  LV_SYMBOL_FILE, "Settings");
-    lv_obj_set_event_cb(list_btn, about_handler);
+    lv_obj_set_event_cb(list_btn, extras_handler);
 
     list_btn = lv_list_add_btn(list2,  LV_SYMBOL_FILE, "About ABM");
-    lv_obj_set_event_cb(list_btn, about_handler);
+    lv_obj_set_event_cb(list_btn, extras_handler);
 }
 
+//Booting indicator
 void draw_booting()
 {
     booting = lv_obj_create(NULL, NULL);
@@ -339,6 +362,8 @@ void draw_booting()
     lv_obj_set_width(label1, 150);
     lv_obj_align(label1, NULL, LV_ALIGN_CENTER, 0, -30);
 }
+
+//Main menu
 void create_menu()
 {
     menu = lv_obj_create(NULL, NULL);
@@ -386,7 +411,7 @@ void create_menu()
         cont=lv_obj_get_parent(lv_win_add_btn(win, LV_SYMBOL_BATTERY_2));
     if (p >=66 && p<99)
         cont=lv_obj_get_parent(lv_win_add_btn(win, LV_SYMBOL_BATTERY_3));
-    if (p ==100) 
+    if (p >=100) 
         cont=lv_obj_get_parent(lv_win_add_btn(win, LV_SYMBOL_BATTERY_FULL));
    
     label1 = lv_label_create(cont, NULL);
