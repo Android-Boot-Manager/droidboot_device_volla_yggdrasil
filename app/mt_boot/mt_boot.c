@@ -2265,8 +2265,13 @@ void mt_boot_init(const struct app_descriptor *app)
 
 	/* Will not return */
 //	boot_linux_from_storage();
-    db_init();
-
+    if (g_boot_mode == RECOVERY_BOOT){
+        boot_linux_from_storage();
+    }
+    else{
+        db_init();
+    }
+    
 fastboot:
 	target_fastboot_init();
 	if (!usb_init)
