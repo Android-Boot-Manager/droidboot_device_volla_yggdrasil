@@ -1,4 +1,4 @@
-#include "lvgl/lvgl.h"
+#include <lib/lvgl.h>
 #include <kernel/thread.h>
 #include <platform/mtk_key.h>
 #include <target/cust_key.h>

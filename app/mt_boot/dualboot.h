@@ -1,4 +1,4 @@
-#include "lvgl/lvgl.h"
+#include <lib/lvgl.h>
 void db_init();
 static int sleep_thread(void * arg);
 void my_disp_flush(lv_disp_t * disp,
