@@ -147,7 +147,7 @@ void my_disp_flush(lv_disp_t * disp,
       color_p++;
     }
   }
-  mt_disp_update(0, 0, 1080, 2340);
+  mt_disp_update(area -> x1, area -> y1, area -> x2, area -> y2);
   lv_disp_flush_ready(disp); /* Indicate you are ready with the flushing*/
 }
 
