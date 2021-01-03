@@ -102,8 +102,8 @@ void boot_entry()
 static int sleep_thread(void * arg) {
   /*Handle LitlevGL tick*/
   while (1) {
-    thread_sleep(10);
-    lv_tick_inc(10);
+    thread_sleep(1);
+    lv_tick_inc(1);
   }
   return 0;
 }
@@ -327,7 +327,7 @@ void draw_menu_extras()
     
     lv_obj_t * list_btn;
     
-    list_btn = lv_list_add_btn(list2,  LV_SYMBOL_FILE, "Spechial boot");
+    list_btn = lv_list_add_btn(list2,  LV_SYMBOL_FILE, "Special boot");
     lv_obj_set_event_cb(list_btn, extras_handler);
 
     list_btn = lv_list_add_btn(list2,  LV_SYMBOL_FILE, "Settings");
@@ -344,7 +344,7 @@ void draw_booting()
     lv_scr_load(booting);
     lv_obj_del(menu);
     lv_obj_t * win = lv_win_create(lv_scr_act(), NULL);
-    lv_win_set_title(win, "Booting"); 
+    lv_win_set_title(win, "Booting..."); 
     lv_obj_t * label1 = lv_label_create(win, NULL);
     lv_label_set_align(label1, LV_LABEL_ALIGN_CENTER);       /*Center aligned lines*/
     lv_label_set_text_fmt(label1, "Booting: %s", boot_now.title);
@@ -410,7 +410,7 @@ void create_menu()
 }
 void db_init()
 {
-    //Make shure we wount boot yet.
+    //Make sure we wont boot yet.
     boot_now.boot=false;
 
     //Init blockdevice
