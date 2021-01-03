@@ -100,21 +100,10 @@ void boot_entry()
 
 //lvgl thread
 static int sleep_thread(void * arg) {
-  /*Handle LitlevGL tasks (tickless mode)*/
+  /*Handle LitlevGL tick*/
   while (1) {
-    lv_tick_inc(10);
-    lv_task_handler();
     thread_sleep(10);
-    if(boot_now.boot){
-        if(boot_now.sleep_time!=1){
-            if(boot_now.sleep_time==0){
-                boot_entry();
-                break;
-            }
-            else
-                boot_now.sleep_time-=10;
-        }
-    }
+    lv_tick_inc(10);
   }
   return 0;
 }
@@ -440,9 +429,9 @@ void db_init()
     lv_init();
 
     //Create thread for LVGL
-    //thread_t *thr;
-    //thr=thread_create("sleeper", & sleep_thread, NULL, HIGHEST_PRIORITY, 16*1024);
-    //thread_resume(thr);
+    thread_t *thr;
+    thr=thread_create("sleeper", & sleep_thread, NULL, HIGHEST_PRIORITY, 16*1024);
+    thread_resume(thr);
 
     //Init display and display buffer for LVGL
     static lv_disp_buf_t disp_buf;
@@ -464,9 +453,8 @@ void db_init()
     mtk_wdt_disable();
 
     while (1) {
-        lv_tick_inc(10);
         lv_task_handler();
-        thread_sleep(10);
+        thread_sleep(3);
         if(boot_now.boot){
             if(boot_now.sleep_time!=1){
                 if(boot_now.sleep_time==0){
