@@ -228,6 +228,7 @@ static void bootmode_handler(lv_obj_t * obj, lv_event_t event)
         }
         if(index==1)
         {   
+//TODO: boot to recovery
             screen_about();
         }
     }
@@ -318,10 +319,10 @@ void draw_menu_extras()
 
     
     lv_indev_drv_t indev_drv;
-    lv_indev_drv_init(&indev_drv);      /*Basic initialization*/
+    lv_indev_drv_init(&indev_drv);      // Basic initialization
     indev_drv.type = LV_INDEV_TYPE_KEYPAD;
     indev_drv.read_cb = key_read;
-    /*Register the driver in LVGL and save the created input device object*/
+    // Register the driver in LVGL and save the created input device object
     lv_indev_t * my_indev = lv_indev_drv_register(&indev_drv);
     lv_indev_set_group(my_indev, g2);
     
@@ -368,10 +369,10 @@ void create_menu()
     lv_list_set_anim_time(list1, 0);
     lv_win_set_scrollbar_mode(win, LV_SCRLBAR_MODE_OFF);
     lv_indev_drv_t indev_drv;
-    lv_indev_drv_init(&indev_drv);      /*Basic initialization*/
+    lv_indev_drv_init(&indev_drv);      // Basic initialization
     indev_drv.type = LV_INDEV_TYPE_KEYPAD;
     indev_drv.read_cb = key_read;
-    /*Register the driver in LVGL and save the created input device object*/
+    // Register the driver in LVGL and save the created input device object
     lv_indev_t * my_indev = lv_indev_drv_register(&indev_drv);
     lv_indev_set_group(my_indev, g1);
     
