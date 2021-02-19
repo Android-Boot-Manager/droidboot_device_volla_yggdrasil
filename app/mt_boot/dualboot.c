@@ -228,8 +228,9 @@ static void bootmode_handler(lv_obj_t * obj, lv_event_t event)
         }
         if(index==1)
         {   
-//TODO: boot to recovery
-            screen_about();
+            // Boot to recovery.
+            g_boot_mode = RECOVERY_BOOT;
+            boot_linux_from_storage();
         }
     }
 }

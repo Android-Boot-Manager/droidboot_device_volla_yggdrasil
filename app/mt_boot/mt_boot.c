@@ -2264,7 +2264,6 @@ void mt_boot_init(const struct app_descriptor *app)
 #endif
 
 	/* Will not return */
-//	boot_linux_from_storage();
     if (g_boot_mode == RECOVERY_BOOT){
         boot_linux_from_storage();
     }
