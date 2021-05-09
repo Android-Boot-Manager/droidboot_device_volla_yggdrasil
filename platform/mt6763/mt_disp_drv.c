@@ -172,7 +172,26 @@ static void _mtkfb_draw_block(unsigned int addr, unsigned int x, unsigned int y,
 		start_addr += pitch;
 	}
 }
+void video_draw_pixel(unsigned int x, unsigned int y, unsigned int color)
+{
+unsigned int i = 0;
+	unsigned int j = 0;
+	void* start_addr = (void*)fb_addr + ALIGN_TO(CFG_DISPLAY_WIDTH, MTK_FB_ALIGNMENT)*4*y + x*4;
+	unsigned int pitch = ALIGN_TO(CFG_DISPLAY_WIDTH, MTK_FB_ALIGNMENT)*4;
+	unsigned int* line_addr = start_addr;
+   // line_addr = start_addr;
+  //  line_addr[0] = color;
+    start_addr += pitch;
+    line_addr = start_addr;
+    line_addr[1] = color;
+	
 
+
+
+//mtkfb_draw_block(fb_addr, x, y, 1, 1, color);
+
+
+}
 static int _mtkfb_internal_test(unsigned int va, unsigned int w, unsigned int h)
 {
 	/* this is for debug, used in bring up day */

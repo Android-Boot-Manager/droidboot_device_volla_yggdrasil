@@ -9,6 +9,7 @@ PLATFORM := mt6763
 MODULES += \
 	dev/keys \
 	lib/ptable \
+	lib/lvgl \
 	dev/lcm \
 
 DUMMY_AP := no

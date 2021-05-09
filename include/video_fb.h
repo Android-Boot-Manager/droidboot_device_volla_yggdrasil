@@ -40,7 +40,7 @@ typedef struct {
 
 
 void *video_hw_init (void);       /* returns GraphicDevice struct or NULL */
-
+void video_draw_pixel(unsigned int x, unsigned int y, unsigned int color);
 void video_set_lut (
     unsigned int index,           /* color number */
     unsigned char r,              /* red */

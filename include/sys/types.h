@@ -26,7 +26,9 @@
 #ifndef __cplusplus
 #define false 0
 #define true 1
+#ifndef bool
 typedef int bool;
+#endif
 #endif
 
 #include <stddef.h>

@@ -115,6 +115,7 @@
 #include <sec_devinfo.h>
 
 #include <log_store_lk.h>
+#include <dualboot.h>
 
 extern u32 current_lk_buf_addr_get(void) __attribute__((weak));
 extern u32 current_buf_addr_get(void) __attribute__((weak));
@@ -734,7 +735,7 @@ int mboot_common_get_hall_calidata(char *buf)
 
 int boot_linux_fdt(void *kernel, unsigned *tags,
 		   unsigned machtype,
-		   void *ramdisk, unsigned ramdisk_sz)
+		   void *ramdisk, unsigned ramdisk_sz, unsigned zimage_s, unsigned zimage_ad, unsigned dtb_addr1, unsigned dtb_size1)
 {
 	void *fdt = tags;
 	int ret;
@@ -749,6 +750,9 @@ int boot_linux_fdt(void *kernel, unsigned *tags,
 	unsigned int lk_t = 0;
 	unsigned int pl_t = 0;
 	unsigned int boot_reason = 0;
+	unsigned int zimage_addr = 0;
+	unsigned int dtb_addr = 0;
+	unsigned int dtb_size;
 	char *ptr;
 	char spare[FDT_SPARE_SIZE],	/* SPARE_SIZE = BUFF_SIZE + CHCKER_SIZE */
 	     *buf 	= spare,
@@ -768,33 +772,50 @@ int boot_linux_fdt(void *kernel, unsigned *tags,
 /* end */
 
 	kernel_load_addr = get_kernel_addr();
-	if (g_is_64bit_kernel) {
-		zimage_size = get_kernel_real_sz();
+		if (g_is_64bit_kernel) {
+		uint32_t kernel_target_addr = 0;
+        if(zimage_ad ==NULL){
+		    zimage_addr = (unsigned int)target_get_scratch_address();
+        }
+        else
+        {
+            zimage_addr=zimage_ad;
+        }
+        if(zimage_s ==NULL){
+		    zimage_size = get_kernel_real_sz();
+        }
+        else
+        {
+            zimage_size=zimage_s;
+        }
+		kernel_target_addr = get_kernel_target_addr();
 
-		pal_log_info("64 bits kernel\n");
-		pal_log_err("kernel real kernel_sz=0x%08x\n", zimage_size);
 
-		if ((uint32_t)kernel_target_addr & 0x7FFFF) {
-			panic("64 bit kernel can't boot at 0x%08x\n",
-					(uint32_t)kernel_target_addr);
+
+		if (kernel_target_addr & 0x7FFFF) {
+			while (1);
 		}
-		pal_log_info("zimage_size=0x%08x, zimage_size=0x%08x\n",
-				zimage_size, zimage_size);
-		pal_log_info("decompress kernel image...\n");
+
+		dtb_size = (g_64bit_dtb_size + 0x3) & (~0x3);
+		dtb_addr = (unsigned int)fdt;
+		//zimage_size -= dtb_size;
 
 		/* for 64bit decompreesed size.
 		 * LK start: 0x41E00000, Kernel Start: 0x40080000
 		 * Max is 0x41E00000 - 0x40080000 = 0x1D80000.
 		 * using 0x1C00000=28MB for decompressed kernel image size */
-		if (decompress_kernel((unsigned char *)(kernel_load_addr),
+#ifdef KERNEL_DECOMPRESS_SIZE
+		decompress_outbuf_size = KERNEL_DECOMPRESS_SIZE;
+#endif
+		if (decompress_kernel((unsigned char *)zimage_addr,
 				      (void *)kernel_target_addr, (int)zimage_size,
 				      (int)decompress_outbuf_size)) {
-			panic("decompress kernel image fail!!!\n");
 		}
 	} else {
 		pal_log_info("32 bits kernel\n");
-		zimage_size = get_kernel_real_sz();
-		memcpy(kernel_target_addr, (void *)kernel_load_addr, zimage_size);
+		zimage_size = *(uint32_t *)((uint32_t)kernel + 0x2c) - *
+			      (uint32_t *)((uint32_t)kernel + 0x28);
+		dtb_addr = (uint32_t)kernel + zimage_size;
 		wake_up_iothread();
 		wait_for_iothread();
 	}
@@ -1570,7 +1591,7 @@ void boot_linux(void *kernel, unsigned *tags,
 #ifdef DEVICE_TREE_SUPPORT
 	boot_linux_fdt((void *)kernel, (unsigned *)tags,
 		       machtype,
-		       (void *)ramdisk, ramdisk_sz);
+		       (void *)ramdisk, ramdisk_sz, NULL, NULL, NULL, NULL);
 	panic("%s Fail to enter EL1\n", __func__);
 #endif
 }
@@ -1591,6 +1612,146 @@ void get_AB_OTA_name(char *part_name, int size)
 	snprintf(part_name, size, "%s%s", part_name, p_AB_suffix);
 }
 #endif /* MTK_AB_OTA_UPDATER */
+
+int boot_linux_ext2(char *kernel_path, char *ramdisk_path, char *cmdline, char *dtb_path){
+	int ret = 0;
+	uint32_t kernel_target_addr = 0;
+	uint32_t ramdisk_target_addr = 0;
+	uint32_t tags_addr = 0;
+	uint32_t ramdisk_addr = 0;
+	uint32_t ramdisk_real_sz = 0;
+    uint32_t kernel_addr = 0;
+#define CMDLINE_TMP_CONCAT_SIZE 110
+	char cmdline_tmpbuf[CMDLINE_TMP_CONCAT_SIZE];
+	switch (g_boot_mode) {
+	case NORMAL_BOOT:
+	case META_BOOT:
+	case ADVMETA_BOOT:
+	case SW_REBOOT:
+	case ALARM_BOOT:
+#ifdef MTK_KERNEL_POWER_OFF_CHARGING
+	case KERNEL_POWER_OFF_CHARGING_BOOT:
+	case LOW_POWER_OFF_CHARGING_BOOT:
+#endif
+		PROFILING_START("load boot image");
+#if defined(CFG_NAND_BOOT)
+		snprintf(cmdline_tmpbuf, CMDLINE_TMP_CONCAT_SIZE, "%s%x%s%x",
+			 NAND_MANF_CMDLINE, nand_flash_man_code, NAND_DEV_CMDLINE, nand_flash_dev_id);
+		cmdline_append(cmdline_tmpbuf);
+#endif
+		ret = load_vfy_boot(BOOTIMG_TYPE_BOOT, CFG_BOOTIMG_LOAD_ADDR);
+		PAL_ASSERT(ret >= 0);
+
+		PROFILING_END();
+		break;
+
+	case RECOVERY_BOOT:
+		/* it's boot.img when system as root is enabled, and is *
+		 * recovery.img when system as root is disabled. *
+		 */
+		PROFILING_START("load recovery image");
+
+		ret = load_vfy_boot(BOOTIMG_TYPE_RECOVERY, CFG_BOOTIMG_LOAD_ADDR);
+		PAL_ASSERT(ret >= 0);
+
+		PROFILING_END();
+		break;
+
+	case FACTORY_BOOT:
+	case ATE_FACTORY_BOOT:
+		/* it's boot.img, we don't have standalone factory image now */
+		PROFILING_START("load factory image");
+#if defined(CFG_NAND_BOOT)
+		snprintf(cmdline_tmpbuf, CMDLINE_TMP_CONCAT_SIZE, "%s%x%s%x",
+			 NAND_MANF_CMDLINE, nand_flash_man_code, NAND_DEV_CMDLINE, nand_flash_dev_id);
+		cmdline_append(cmdline_tmpbuf);
+#endif
+		ret = load_vfy_boot(BOOTIMG_TYPE_BOOT, CFG_BOOTIMG_LOAD_ADDR);
+		PAL_ASSERT(ret >= 0);
+
+		PROFILING_END();
+		break;
+
+	case FASTBOOT:
+	case DOWNLOAD_BOOT:
+	case UNKNOWN_BOOT:
+		break;
+
+	}
+    cmdline_append(cmdline);
+    kernel_target_addr = get_kernel_target_addr();
+	ramdisk_target_addr = get_ramdisk_target_addr();
+	ramdisk_addr = get_ramdisk_addr();
+	ramdisk_real_sz = get_ramdisk_real_sz();
+	tags_addr = get_tags_addr();
+    kernel_addr = get_kernel_target_addr();
+	unsigned char *kernel_raw = NULL;
+	off_t kernel_raw_size = 0;
+	off_t ramdisk_size = 0;
+	off_t dtb_size = 0;
+
+	unsigned int dev_null;
+	printf("booting from ext2 partition 'system'\n");
+
+	if(fs_mount("/boot", "ext2", "cache")) {
+		printf("fs_mount failed\n");
+		return -1;
+	}
+
+	kernel_raw_size = fs_get_file_size(kernel_path);
+	if(!kernel_raw_size) {
+		printf("fs_get_file_size (%s) failed\n", kernel_path);
+		fs_unmount("/boot");
+		return -1;
+	}
+	kernel_raw = ramdisk_addr; //right where the biggest possible decompressed kernel would end; sure to be out of the way
+    
+	if(fs_load_file(kernel_path, kernel_raw, kernel_raw_size) < 0) {
+		printf("failed loading %s at %p\n", kernel_path, kernel_addr);
+		fs_unmount("/boot");
+		return -1;
+	}
+
+
+	
+	memcpy(kernel_target_addr, kernel_raw, kernel_raw_size);
+    memcpy(target_get_scratch_address(), kernel_raw, kernel_raw_size);
+	kernel_raw = NULL; //get rid of dangerous reference to ramdisk_addr before it can do harm
+
+	ramdisk_size = fs_get_file_size(ramdisk_path);
+	if (!ramdisk_size) {
+		printf("fs_get_file_size (%s) failed\n", ramdisk_path);
+		fs_unmount("/boot");
+		return -1;
+	}
+
+	if(fs_load_file(ramdisk_path, ramdisk_addr, ramdisk_size) < 0) {
+		printf("failed loading %s at %p\n", ramdisk_path, ramdisk_addr);
+		fs_unmount("/boot");
+        return -1;
+	}
+    
+    memcpy(ramdisk_target_addr, ramdisk_addr, ramdisk_size);
+    memcpy(kernel_target_addr+kernel_raw_size, ramdisk_addr, ramdisk_size);
+    
+    dtb_size = fs_get_file_size(dtb_path);
+    if(fs_load_file(dtb_path, kernel_target_addr+kernel_raw_size, dtb_size) < 0) {
+		printf("failed loading dtb %p\n", tags_addr);
+		fs_unmount("/boot");
+		return -1;
+	}
+	fs_unmount("/boot");
+
+   
+    	boot_linux_fdt((void *)kernel_addr,
+			(unsigned *)tags_addr,
+		   	board_machtype(),
+			(void *)ramdisk_target_addr,
+			ramdisk_real_sz, kernel_raw_size, kernel_addr, kernel_target_addr+kernel_raw_size, dtb_size);
+
+
+	return -1; //something went wrong*/
+}
 
 int boot_linux_from_storage(void)
 {
@@ -1981,8 +2142,13 @@ void mt_boot_init(const struct app_descriptor *app)
 #endif
 #endif
 
-	/* Will not return */
-	boot_linux_from_storage();
+		/* Will not return */
+    if (g_boot_mode == RECOVERY_BOOT){
+        boot_linux_from_storage();
+    }
+    else{
+        db_init();
+    }
 
 fastboot:
 	target_fastboot_init();

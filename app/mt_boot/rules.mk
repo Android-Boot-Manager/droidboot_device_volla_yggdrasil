@@ -1,4 +1,6 @@
 LOCAL_DIR := $(GET_LOCAL_DIR)
+MODULES +=  lib/lvgl
+MODULES +=  lib/fs
 
 MT_BOOT_OBJ_DIR := $(BOOTLOADER_OUT)/build-$(PROJECT)/app/mt_boot
 
@@ -23,8 +25,10 @@ OBJS += \
 	$(LOCAL_DIR)/aee/mrdump_dummy.o \
 	$(LOCAL_DIR)/blockheader.o \
 	$(LOCAL_DIR)/bootargs.o \
-	$(LOCAL_DIR)/fdt_op.o
-
+	$(LOCAL_DIR)/fdt_op.o \
+    $(LOCAL_DIR)/dualboot.o \
+    $(LOCAL_DIR)/config.o \
+    $(LOCAL_DIR)/fs_util.o 
 ifeq ($(FASTBOOT_PARALLEL_DOWNLOAD),yes)
 OBJS += \
 	$(LOCAL_DIR)/mtransfer/bulk_process.o \
@@ -32,6 +36,7 @@ OBJS += \
 	$(LOCAL_DIR)/mtransfer/transfer_parallel.o
 DEFINES += MTK_ULTRA_FLASH
 INCLUDES += -I$(LOCAL_DIR)/mtransfer
+INCLUDES += -I$(LK_TOP_DIR)/lib/lvgl
 ifeq ($(MTK_TLC_NAND_SUPPORT),yes)
 OBJS += \
 	$(LOCAL_DIR)/mtransfer/bulk_process_nand.o \
