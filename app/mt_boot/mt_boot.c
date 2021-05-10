@@ -771,51 +771,45 @@ int boot_linux_fdt(void *kernel, unsigned *tags,
 	char *hardinfo_pbuf;
 /* end */
 
-	kernel_load_addr = get_kernel_addr();
-		if (g_is_64bit_kernel) {
-		uint32_t kernel_target_addr = 0;
-        if(zimage_ad ==NULL){
-		    zimage_addr = (unsigned int)target_get_scratch_address();
-        }
-        else
-        {
-            zimage_addr=zimage_ad;
-        }
-        if(zimage_s ==NULL){
-		    zimage_size = get_kernel_real_sz();
-        }
-        else
-        {
-            zimage_size=zimage_s;
-        }
-		kernel_target_addr = get_kernel_target_addr();
-
-
-
-		if (kernel_target_addr & 0x7FFFF) {
-			while (1);
+	
+	if (g_is_64bit_kernel) {
+		if(zimage_s ==NULL){
+			zimage_size = get_kernel_real_sz();
 		}
+		else{
+			zimage_size = zimage_s;
+		}
+		if(zimage_ad ==NULL)
+		{
+			kernel_load_addr = get_kernel_addr();
+		}
+		else{
+			kernel_load_addr = zimage_ad;
+		}
+		pal_log_info("64 bits kernel\n");
+		pal_log_err("kernel real kernel_sz=0x%08x\n", zimage_size);
 
-		dtb_size = (g_64bit_dtb_size + 0x3) & (~0x3);
-		dtb_addr = (unsigned int)fdt;
-		//zimage_size -= dtb_size;
+		if ((uint32_t)kernel_target_addr & 0x7FFFF) {
+			panic("64 bit kernel can't boot at 0x%08x\n",
+					(uint32_t)kernel_target_addr);
+		}
+		pal_log_info("zimage_size=0x%08x, zimage_size=0x%08x\n",
+				zimage_size, zimage_size);
+		pal_log_info("decompress kernel image...\n");
 
 		/* for 64bit decompreesed size.
 		 * LK start: 0x41E00000, Kernel Start: 0x40080000
 		 * Max is 0x41E00000 - 0x40080000 = 0x1D80000.
 		 * using 0x1C00000=28MB for decompressed kernel image size */
-#ifdef KERNEL_DECOMPRESS_SIZE
-		decompress_outbuf_size = KERNEL_DECOMPRESS_SIZE;
-#endif
-		if (decompress_kernel((unsigned char *)zimage_addr,
+		if (decompress_kernel((unsigned char *)(kernel_load_addr),
 				      (void *)kernel_target_addr, (int)zimage_size,
 				      (int)decompress_outbuf_size)) {
+			panic("decompress kernel image fail!!!\n");
 		}
 	} else {
 		pal_log_info("32 bits kernel\n");
-		zimage_size = *(uint32_t *)((uint32_t)kernel + 0x2c) - *
-			      (uint32_t *)((uint32_t)kernel + 0x28);
-		dtb_addr = (uint32_t)kernel + zimage_size;
+		zimage_size = get_kernel_real_sz();
+		memcpy(kernel_target_addr, (void *)kernel_load_addr, zimage_size);
 		wake_up_iothread();
 		wait_for_iothread();
 	}
