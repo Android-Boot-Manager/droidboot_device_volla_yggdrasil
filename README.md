@@ -4,7 +4,7 @@ This repo contains a [lk](https://github.com/littlekernel)-based bootlader for t
 to support dualbooting (booting of different operating systems on the same mobile device)
 from the internal device storage or an inserted (fast) SD card.
 
-**Current status: alpha (only for expirienced users)**
+**Current status: alpha (only for experienced users)**
 
 -------
 Be sure to check out our [wiki](https://github.com/Android-Boot-Manager/App/wiki)!
