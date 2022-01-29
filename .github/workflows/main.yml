@@ -26,7 +26,10 @@ jobs:
         git clone https://github.com/Android-Boot-Manager/droidboot_device_volla_yggdrasil -b vollaos-10 ~/droidboot_device_volla_yggdrasil
     - name: Get toolchain
       run: |
-        git clone https://android.googlesource.com/platform/prebuilts/gcc/linux-x86/arm/arm-linux-androideabi-4.9 ~/toolchain -b 16dab5225bf4c95baae3733f05b6e4b0e1c9aae9 --depth 1
+        git clone https://android.googlesource.com/platform/prebuilts/gcc/linux-x86/arm/arm-linux-androideabi-4.9 ~/toolchain --depth 1
+        cd ~/toolchain
+        git fetch origin 16dab5225bf4c95baae3733f05b6e4b0e1c9aae9 --depth 1
+        git checkout 16dab5225bf4c95baae3733f05b6e4b0e1c9aae9
     - name: Build 
       run: |
         cd ~/droidboot_device_volla_yggdrasil
