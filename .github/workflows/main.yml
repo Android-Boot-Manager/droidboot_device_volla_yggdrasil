@@ -14,16 +14,13 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - name: Checkout
-      uses: actions/checkout@master
-    
     - name: Initialization environment
       run: |
         sudo apt-get update
         sudo apt-get install -y device-tree-compiler git libfdt-dev curl
     - name: Downloading source code
       run: |
-        git clone https://github.com/Android-Boot-Manager/droidboot_device_volla_yggdrasil -b vollaos-10 ~/droidboot_device_volla_yggdrasil
+        git clone https://github.com/Android-Boot-Manager/droidboot_device_volla_yggdrasil -b vollaos-10 ~/droidboot_device_volla_yggdrasil --depth 1
     - name: Get toolchain
       run: |
         git clone https://android.googlesource.com/platform/prebuilts/gcc/linux-x86/arm/arm-linux-androideabi-4.9 ~/toolchain --depth 1
