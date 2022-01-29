@@ -1,0 +1,38 @@
+# This is a basic workflow to help you get started with Actions
+
+name: lk build
+
+# Controls when the action will run. Triggers the workflow on push or pull request
+# events but only for the master branch
+on: push
+
+
+# A workflow run is made up of one or more jobs that can run sequentially or in parallel
+jobs:
+
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout
+      uses: actions/checkout@master
+    
+    - name: Initialization environment
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y device-tree-compiler git libfdt-dev curl
+    - name: Downloading source code
+      run: |
+        git clone https://github.com/Android-Boot-Manager/droidboot_device_volla_yggdrasil -b vollaos-10 ~/droidboot_device_volla_yggdrasil
+    - name: Get toolchain
+      run: |
+        git clone https://android.googlesource.com/platform/prebuilts/gcc/linux-x86/arm/arm-linux-androideabi-4.9 ~/toolchain -b 16dab5225bf4c95baae3733f05b6e4b0e1c9aae9 --depth 1
+    - name: Build 
+      run: |
+        cd ~/droidboot_device_volla_yggdrasil
+        make TOOLCHAIN_PREFIX=~/toolchain/bin/arm-linux-androideabi- k63v2_64_bsp 
+    - name : Upload boot image
+      uses: actions/upload-artifact@master
+      with:
+        name: lk image
+        path: /home/runner/droidboot_device_volla_yggdrasil/build-k63v2_64_bsp/lk.img
