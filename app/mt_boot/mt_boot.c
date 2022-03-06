@@ -770,6 +770,7 @@ int boot_linux_fdt(void *kernel, unsigned *tags,
 /* begin, prize-lifenfen-20181120, add for hardware info, ddr, etc. */
 	char *hardinfo_pbuf;
 /* end */
+	cmdline_append("ABM.bootloader=1");
 
 	
 	if (g_is_64bit_kernel) {
