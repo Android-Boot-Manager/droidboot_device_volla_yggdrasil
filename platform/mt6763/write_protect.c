@@ -152,7 +152,7 @@ void write_protect_flow(void)
 	pal_log_err("bypass write protect flag = %d! \n", bypass_wp);
 #endif
 
-	if (!bypass_wp) {
+	if (0) {
 		set_write_protect();
 		pal_log_err("write protect Done! \n");
 	} else
