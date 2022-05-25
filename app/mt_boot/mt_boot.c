@@ -117,6 +117,36 @@
 #include <log_store_lk.h>
 #include <dualboot.h>
 
+
+void DumpHex(const void* data, size_t size) {
+	char ascii[17];
+	size_t i, j;
+	ascii[16] = '\0';
+	for (i = 0; i < size; ++i) {
+		video_printf("%02X ", ((unsigned char*)data)[i]);
+		if (((unsigned char*)data)[i] >= ' ' && ((unsigned char*)data)[i] <= '~') {
+			ascii[i % 16] = ((unsigned char*)data)[i];
+		} else {
+			ascii[i % 16] = '.';
+		}
+		if ((i+1) % 8 == 0 || i+1 == size) {
+			video_printf(" ");
+			if ((i+1) % 16 == 0) {
+				video_printf("|  %s \n", ascii);
+			} else if (i+1 == size) {
+				ascii[(i+1) % 16] = '\0';
+				if ((i+1) % 16 <= 8) {
+					video_printf(" ");
+				}
+				for (j = (i+1) % 16; j < 16; ++j) {
+					video_printf("   ");
+				}
+				video_printf("|  %s \n", ascii);
+			}
+		}
+	}
+}
+
 extern u32 current_lk_buf_addr_get(void) __attribute__((weak));
 extern u32 current_buf_addr_get(void) __attribute__((weak));
 extern u32 current_buf_pl_lk_log_size_get(void) __attribute__((weak));
@@ -735,7 +765,8 @@ int mboot_common_get_hall_calidata(char *buf)
 
 int boot_linux_fdt(void *kernel, unsigned *tags,
 		   unsigned machtype,
-		   void *ramdisk, unsigned ramdisk_sz, unsigned zimage_s, unsigned zimage_ad, unsigned dtb_addr1, unsigned dtb_size1)
+		   void *ramdisk, unsigned ramdisk_sz, void *custom_kernel, int custom_kernel_size, int use_custom_kernel)
+
 {
 	void *fdt = tags;
 	int ret;
@@ -774,19 +805,9 @@ int boot_linux_fdt(void *kernel, unsigned *tags,
 
 	
 	if (g_is_64bit_kernel) {
-		if(zimage_s ==NULL){
-			zimage_size = get_kernel_real_sz();
-		}
-		else{
-			zimage_size = zimage_s;
-		}
-		if(zimage_ad ==NULL)
-		{
-			kernel_load_addr = get_kernel_addr();
-		}
-		else{
-			kernel_load_addr = zimage_ad;
-		}
+		zimage_size = get_kernel_real_sz();
+		kernel_load_addr = get_kernel_addr();
+        video_printf("Going to boot 64-bit kernel\n");
 		pal_log_info("64 bits kernel\n");
 		pal_log_err("kernel real kernel_sz=0x%08x\n", zimage_size);
 
@@ -802,11 +823,27 @@ int boot_linux_fdt(void *kernel, unsigned *tags,
 		 * LK start: 0x41E00000, Kernel Start: 0x40080000
 		 * Max is 0x41E00000 - 0x40080000 = 0x1D80000.
 		 * using 0x1C00000=28MB for decompressed kernel image size */
-		if (decompress_kernel((unsigned char *)(kernel_load_addr),
-				      (void *)kernel_target_addr, (int)zimage_size,
-				      (int)decompress_outbuf_size)) {
-			panic("decompress kernel image fail!!!\n");
-		}
+		if(!use_custom_kernel){
+		    video_printf("no custom kernel found, using one from boot partition\n");
+		    if (decompress_kernel((unsigned char *)(kernel_load_addr),
+				        (void *)kernel_target_addr, (int)zimage_size,
+				        (int)decompress_outbuf_size)) {
+				video_printf("Custom kernel decomress failed\n");
+			    panic("decompress kernel image fail!!!\n");
+	    	}
+	    }
+	    else{
+	    video_printf("Kernel header:\n");
+	        video_printf("Custom kernel found, decomressing it\n");
+	        if (decompress_kernel((unsigned char *)(custom_kernel),
+				        (void *)kernel_target_addr, (int)custom_kernel_size,
+				        (int)decompress_outbuf_size)) {
+				video_printf("decompress kernel image fail!!!\n");
+			    panic("decompress kernel image fail!!!\n");
+	        }
+	    }
+	     video_printf("Kernel header:\n");
+	     DumpHex(kernel_target_addr ,512);
 	} else {
 		pal_log_info("32 bits kernel\n");
 		zimage_size = get_kernel_real_sz();
@@ -1466,7 +1503,7 @@ int boot_linux_fdt(void *kernel, unsigned *tags,
 
 	pal_log_err("booting linux @ %p, ramdisk @ %p (%d)\n",
 		kernel, ramdisk, ramdisk_sz);
-
+    video_printf("Booting linux!!!!!!!!!!!!!\n");
 	if (strncmp(checker, FDT_BUFF_END, FDT_CHECKER_SIZE) != 0) {
 		pal_log_err("ERROR: fdt buff overflow\n");
 		assert(0);
@@ -1586,7 +1623,8 @@ void boot_linux(void *kernel, unsigned *tags,
 #ifdef DEVICE_TREE_SUPPORT
 	boot_linux_fdt((void *)kernel, (unsigned *)tags,
 		       machtype,
-		       (void *)ramdisk, ramdisk_sz, NULL, NULL, NULL, NULL);
+		       (void *)ramdisk, ramdisk_sz, NULL, NULL, false);
+
 	panic("%s Fail to enter EL1\n", __func__);
 #endif
 }
@@ -1612,12 +1650,13 @@ int boot_linux_ext2(char *kernel_path, char *ramdisk_path, char *cmdline, char *
 	int ret = 0;
 	uint32_t kernel_target_addr = 0;
 	uint32_t ramdisk_target_addr = 0;
-	uint32_t tags_addr = 0;
+	uint32_t tags_target_addr = 0;
 	uint32_t ramdisk_addr = 0;
 	uint32_t ramdisk_real_sz = 0;
-    uint32_t kernel_addr = 0;
+#if defined(CFG_NAND_BOOT)
 #define CMDLINE_TMP_CONCAT_SIZE 110
 	char cmdline_tmpbuf[CMDLINE_TMP_CONCAT_SIZE];
+#endif
 	switch (g_boot_mode) {
 	case NORMAL_BOOT:
 	case META_BOOT:
@@ -1673,14 +1712,102 @@ int boot_linux_ext2(char *kernel_path, char *ramdisk_path, char *cmdline, char *
 		break;
 
 	}
-    cmdline_append(cmdline);
-    kernel_target_addr = get_kernel_target_addr();
+	kernel_target_addr = get_kernel_target_addr();
 	ramdisk_target_addr = get_ramdisk_target_addr();
 	ramdisk_addr = get_ramdisk_addr();
 	ramdisk_real_sz = get_ramdisk_real_sz();
-	tags_addr = get_tags_addr();
-    kernel_addr = get_kernel_target_addr();
-	unsigned char *kernel_raw = NULL;
+	tags_target_addr = get_tags_addr();
+
+	PAL_ASSERT(kernel_target_addr != 0);
+	PAL_ASSERT(ramdisk_target_addr != 0);
+	PAL_ASSERT(ramdisk_addr != 0);
+#if (!defined(SYSTEM_AS_ROOT) && !defined(MTK_RECOVERY_RAMDISK_SPLIT))
+	PAL_ASSERT(ramdisk_real_sz != 0);
+#endif
+
+#ifdef MTK_3LEVEL_PAGETABLE
+	/* rootfs addr */
+	arch_mmu_map((uint64_t)ramdisk_target_addr,
+		(uint32_t)ramdisk_target_addr,
+		MMU_MEMORY_TYPE_NORMAL_WRITE_BACK | MMU_MEMORY_AP_P_RW_U_NA,
+		ROUNDUP(LK_RAMDISK_MAX_SIZE, PAGE_SIZE));
+#endif
+#ifdef MTK_RECOVERY_RAMDISK_SPLIT
+	if (g_boot_mode == RECOVERY_BOOT) {
+		uint32_t ramdisk_compressed_sz;
+		load_vfy_ramdisk(&ramdisk_compressed_sz);
+		ramdisk_real_sz = ramdisk_compressed_sz;
+	}
+	else
+#endif /* MTK_RECOVERY_RAMDISK_SPLIT */
+	/* relocate rootfs */
+	memcpy((void *)ramdisk_target_addr,
+		(void *)ramdisk_addr,
+		(size_t)ramdisk_real_sz);
+	/*
+	 * merge dtb's bootargs with customized cmdline
+	 * as early as possible
+	 */
+	bootargs_init((void *)tags_target_addr);
+
+	custom_port_in_kernel(g_boot_mode, cmdline_get());
+
+	/* append cmdline from bootimg hdr */
+	cmdline_append(get_cmdline());
+
+#ifdef SELINUX_STATUS
+#if SELINUX_STATUS == 1
+	cmdline_append("androidboot.selinux=disabled");
+#elif SELINUX_STATUS == 2
+	cmdline_append("androidboot.selinux=permissive");
+#endif
+#endif
+
+	/* This is patch for Android Test Mode(ATM). */
+	/* 1. Sets kernel cmdline for ATM only in normal mode
+	* 2. Bypass write protect in boot mode "normal" when ATM is enabled.
+	* Background:
+	* "proinfo" partition is write protected in boot mode "normal". When ATM is enabled,
+	* we bypass write protection since we needs to write to proinfo. Whether device is in ATM
+	* should also be passed to kernel through cmdline, only seen in normal mode
+	*/
+	if (g_boot_mode == NORMAL_BOOT) {
+		if (true == get_atm_enable_status()) {
+			cmdline_append("androidboot.atm=enable");
+		} else if (false == get_atm_enable_status()) {
+			write_protect_flow();
+			cmdline_append("androidboot.atm=disabled");
+		}
+	}
+
+	// MTK read printk ratelimit config
+	read_ratelimit_config();
+#if !defined(SYSTEM_AS_ROOT) && defined(RECOVERY_AS_BOOT)
+	 /*
+	  * In Q, if RECOVERY_AS_BOOT is enabled, normal boot and recovery
+	  * ramdisk is in the same boot partition.
+	  * Recovery ramdisk is in root folder and normal boot ramdisk in another subfolder.
+	  * If MTK_RECOVERY_RAMDISK_SPLIT is enabled, we do not indicate init process to
+	  * switch root to /first_stage_mount since RECOVERY_AS_BOOT only
+	  * enabled in A/B system.
+	  */
+#if !defined(MTK_RECOVERY_RAMDISK_SPLIT)
+	if (g_boot_mode != RECOVERY_BOOT)
+		cmdline_append("androidboot.force_normal_boot=1");
+#endif
+#endif
+
+	/* pass the meta_log_disable to user space logger, default is enable */
+	if (is_meta_log_disable && (is_meta_log_disable() == 1)) {
+		cmdline_append("androidboot.meta_log_disable=1");
+	} else {
+		cmdline_append("androidboot.meta_log_disable=0");
+	}
+
+	/* pass related root of trust info via SMC call */
+	send_root_of_trust_info();
+	unsigned char *kernel_raw = get_kernel_addr();
+	unsigned char *ramdisk_raw = ramdisk_target_addr;
 	off_t kernel_raw_size = 0;
 	off_t ramdisk_size = 0;
 	off_t dtb_size = 0;
@@ -1699,19 +1826,15 @@ int boot_linux_ext2(char *kernel_path, char *ramdisk_path, char *cmdline, char *
 		fs_unmount("/boot");
 		return -1;
 	}
-	kernel_raw = ramdisk_addr; //right where the biggest possible decompressed kernel would end; sure to be out of the way
+	
     
 	if(fs_load_file(kernel_path, kernel_raw, kernel_raw_size) < 0) {
-		printf("failed loading %s at %p\n", kernel_path, kernel_addr);
+		printf("failed loading %s at %p\n", kernel_path, kernel_raw);
 		fs_unmount("/boot");
 		return -1;
 	}
+   DumpHex(kernel_raw, 512);
 
-
-	
-	memcpy(kernel_target_addr, kernel_raw, kernel_raw_size);
-    memcpy(target_get_scratch_address(), kernel_raw, kernel_raw_size);
-	kernel_raw = NULL; //get rid of dangerous reference to ramdisk_addr before it can do harm
 
 	ramdisk_size = fs_get_file_size(ramdisk_path);
 	if (!ramdisk_size) {
@@ -1720,29 +1843,22 @@ int boot_linux_ext2(char *kernel_path, char *ramdisk_path, char *cmdline, char *
 		return -1;
 	}
 
-	if(fs_load_file(ramdisk_path, ramdisk_addr, ramdisk_size) < 0) {
+	if(fs_load_file(ramdisk_path, ramdisk_raw, ramdisk_size) < 0) {
 		printf("failed loading %s at %p\n", ramdisk_path, ramdisk_addr);
 		fs_unmount("/boot");
         return -1;
 	}
     
-    memcpy(ramdisk_target_addr, ramdisk_addr, ramdisk_size);
-    memcpy(kernel_target_addr+kernel_raw_size, ramdisk_addr, ramdisk_size);
     
-    dtb_size = fs_get_file_size(dtb_path);
-    if(fs_load_file(dtb_path, kernel_target_addr+kernel_raw_size, dtb_size) < 0) {
-		printf("failed loading dtb %p\n", tags_addr);
-		fs_unmount("/boot");
-		return -1;
-	}
 	fs_unmount("/boot");
 
    
-    	boot_linux_fdt((void *)kernel_addr,
-			(unsigned *)tags_addr,
+    	boot_linux_fdt((void *)kernel_target_addr,
+			(unsigned *)tags_target_addr,
 		   	board_machtype(),
-			(void *)ramdisk_target_addr,
-			ramdisk_real_sz, kernel_raw_size, kernel_addr, kernel_target_addr+kernel_raw_size, dtb_size);
+			(void *)ramdisk_raw,
+			ramdisk_size, (void *)kernel_raw, kernel_raw_size, true);
+
 
 
 	return -1; //something went wrong*/
