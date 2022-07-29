@@ -1,0 +1,3 @@
+[submodule "app/droidboot_gui"]
+	path = app/droidboot_gui
+	url = https://github.com/Android-Boot-Manager/droidboot_gui
