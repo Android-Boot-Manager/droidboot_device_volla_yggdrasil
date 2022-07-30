@@ -1,7 +1,9 @@
 #
 LOCAL_DIR := $(GET_LOCAL_DIR)
 TARGET := k63v2_64_bsp
+DROIDBOOT_PLATFORM := yggdrasil
 MODULES += app/mt_boot \
+           app/droidboot_gui \
            dev/lcm
 MTK_EMMC_SUPPORT=yes
 MTK_KERNEL_POWER_OFF_CHARGING = yes

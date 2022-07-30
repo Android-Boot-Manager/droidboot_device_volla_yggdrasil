@@ -13,6 +13,31 @@
 #undef CHAR_BIT
 #define CHAR_BIT __CHAR_BIT__
 
+/* INT16 max size */
+#ifndef INT16_MAX
+#define INT16_MAX 32767
+#endif
+
+/* INT16 min size */
+#ifndef INT16_MIN
+#define INT16_MIN (-32768)
+#endif
+
+/* INT32 min value */
+#ifndef INT32_MIN
+#define INT32_MIN (-2147483647 - 1)
+#endif
+
+/* UINT32 max value */
+#ifndef UINT32_MAX
+#define UINT32_MAX 0xffffffff  /* 4294967295U */
+#endif
+
+/* SIZE max value */
+#ifndef SIZE_MAX
+#define SIZE_MAX UINT32_MAX
+#endif
+
 /* Maximum length of a multibyte character.  */
 #ifndef MB_LEN_MAX
 #define MB_LEN_MAX 1

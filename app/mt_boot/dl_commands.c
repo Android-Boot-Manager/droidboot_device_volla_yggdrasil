@@ -144,6 +144,8 @@ extern int usb_read(void *buf, unsigned len);
 extern int sec_dl_permission_chk(const char *part_name, unsigned int *permitted);
 extern int sec_format_permission_chk(const char *part_name, unsigned int *permitted);
 
+bool flash_storage(const char* arg, void* data, unsigned sz);
+
 /* todo: give lk strtoul and nuke this */
 static u64 hex2uint64(const char *x)
 {
