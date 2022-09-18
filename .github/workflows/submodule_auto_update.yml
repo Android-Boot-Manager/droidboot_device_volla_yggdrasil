@@ -16,5 +16,5 @@ jobs:
           git config --global user.name "Android Boot Manager (GH Actions)"
           git config --global user.email "noreply@github.com"
           git remote set-url origin https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}
-          git commit -am "submodules_auto_update: Update submodule - ${{ github.event.client_payload.ref }}@${{ github.event.client_payload.module }}"
+          git commit -am "submodules_auto_update: Update submodule - ${{ github.event.client_payload.ref }}@${{ github.event.client_payload.module }}" || true
           git push
