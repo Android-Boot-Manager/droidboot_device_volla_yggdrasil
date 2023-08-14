@@ -1,0 +1,39 @@
+name: CI workflow
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  lk-build:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout sources
+      uses: actions/checkout@v2
+    - name: Initialize submodules
+      run: git submodule update --init --recursive
+    - name: Add GCC to $PATH
+      run: echo "PATH=$PATH:$HOME/gcc-toolchain/bin" >> $GITHUB_ENV
+    - name: Cache GCC for Android
+      id: cache-gcc
+      uses: actions/cache@v3
+      with:
+        path: ~/gcc-toolchain
+        key: gcc-toolchain
+    - name: Download GCC for Android
+      if: steps.cache-gcc.outputs.cache-hit != 'true'
+      run: |
+        git clone https://android.googlesource.com/platform/prebuilts/gcc/linux-x86/arm/arm-linux-androideabi-4.9 ~/gcc-toolchain
+        cd ~/gcc-toolchain
+        git checkout e9b2ab0932573a0ca90cad11ab75d9619f19c458
+    - name: Build the bootloader
+      run: make k69v1_64
+    - name: Add DTB to LK
+      run: cat /home/runner/work/droidboot_device_volla_yggdrasil/droidboot_device_volla_yggdrasil/build-k69v1_64/lk.img /home/runner/work/droidboot_device_volla_yggdrasil/droidboot_device_volla_yggdrasil/main_dtb_header.bin > /home/runner/work/droidboot_device_volla_yggdrasil/droidboot_device_volla_yggdrasil/lk.img
+    - name : Upload bootloader (unsigned)
+      uses: actions/upload-artifact@v2
+      with:
+        name: yggdrasil_lk-unsigned.img
+        path: /home/runner/work/droidboot_device_volla_yggdrasil/droidboot_device_volla_yggdrasil/lk.img
