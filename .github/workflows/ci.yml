@@ -29,7 +29,7 @@ jobs:
         cd ~/gcc-toolchain
         git checkout e9b2ab0932573a0ca90cad11ab75d9619f19c458
     - name: Build the bootloader
-      run: make k63v2_64_bsp
+      run: make TOOLCHAIN_PREFIX=~/toolchain/bin/arm-linux-androideabi k63v2_64_bsp
     - name: Add DTB to LK
       run: cat /home/runner/work/droidboot_device_volla_yggdrasil/droidboot_device_volla_yggdrasil/build-k63v2_64_bsp/lk.img /home/runner/work/droidboot_device_volla_yggdrasil/droidboot_device_volla_yggdrasil/main_dtb_header.bin > /home/runner/work/droidboot_device_volla_yggdrasil/droidboot_device_volla_yggdrasil/lk.img
     - name : Upload bootloader (unsigned)
