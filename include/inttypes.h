@@ -28,6 +28,7 @@
 #define PRIi32   "I32i"
 #define PRId32 "d"
 #define PRIu32 "u"
+#define PRIX32 "x"
         
 #endif
 
